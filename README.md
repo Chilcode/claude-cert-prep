@@ -14,11 +14,17 @@ Built 2026-07-11 from the official exam guide (v0.2, 2026-06-30). Everything in 
 4. **`exercises/`** — the guide's 4 official prep exercises turned into evening-sized builds with paste-ready code and "break it on purpose" experiments. Do Exercise 1 (agentic loop + hooks) before anything else: it makes stop_reason, tool_use, and programmatic enforcement physical instead of theoretical.
 5. **`questions/bank.json`** — ~60 adversarially-verified practice questions in exam style (interactive quiz app link below). Drill AFTER reading the playbook; use wrong answers to route you back to the relevant domain file.
 
-## The quiz app
+## The study hub (read it OR listen to it)
 
-**https://claude.ai/code/artifact/0e5ebe8b-91b4-4d67-a551-dfaa1f70ded8**
+**Live site: https://chilcode.github.io/claude-cert-prep/** (also on claude.ai: https://claude.ai/code/artifact/0e5ebe8b-91b4-4d67-a551-dfaa1f70ded8)
 
-Two modes: **Drill** (filter by scenario/domain, instant feedback with the decision rule behind every answer, "missed only" replay) and **Exam simulation** (4 random scenarios × 10 questions, 80-minute clock, answer-to-advance like the real platform, per-domain scorecard at the end). Answer positions shuffle every run. Stats persist in the browser.
+Everything in one navigable app — works on your phone:
+
+- **Study tab** — all 14 docs rendered in the browser with **read-aloud**: open a doc, hit "Listen to this doc" and it reads while highlighting and scrolling each paragraph so you can follow along. Double-click any paragraph to start listening from there. `R` restarts.
+- **Practice tab** — **Drill** (filter by scenario/domain, instant feedback with the decision rule behind every answer, "missed only" replay) and **Exam simulation** (4 random scenarios × 10 questions, 80-minute clock, answer-to-advance like the real platform, per-domain scorecard). Every question, its options, and its explanation can be read aloud — turn on "Read questions aloud automatically" in Audio settings, or press `R` on any question. Answer positions shuffle every run; stats persist in the browser.
+- **Voices**: it uses your system voices. For the best quality open the site in **Microsoft Edge** (desktop or Android) and pick a voice with "Natural" in the name.
+
+**Real-exam tip:** the exam is online-proctored — before booking, ask the test provider about accessibility accommodations (screen reader support and/or extended time). Reading accommodations on a 60-question / 120-minute reading-heavy exam are exactly what those policies exist for.
 
 ## Weight-adjusted priorities
 
