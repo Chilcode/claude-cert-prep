@@ -175,6 +175,26 @@
     @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     html { scroll-behavior: smooth; }
   }
+
+  /* interactive tutor */
+  .tutor { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: min(680px, 100%); background: var(--surface); border: 1px solid var(--line-strong); border-bottom: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -8px 40px rgba(0,0,0,.18); z-index: 20; display: flex; flex-direction: column; max-height: 72vh; }
+  .tutor-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .tutor-title { font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); white-space: nowrap; }
+  .tutor-ctx { flex: 1; font-family: var(--serif); font-size: 13.5px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tutor-x { background: none; border: 0; font-size: 18px; color: var(--ink-soft); line-height: 1; padding: 2px 6px; cursor: pointer; }
+  .tutor-x:hover { color: var(--ink); }
+  .tutor-thread { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 56px; }
+  .tmsg { font-size: 14.5px; line-height: 1.5; padding: 9px 12px; border-radius: 10px; max-width: 88%; white-space: pre-wrap; }
+  .tmsg .who { display: block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-bottom: 3px; }
+  .tmsg.user { align-self: flex-end; background: var(--accent-bg); border: 1px solid var(--accent); }
+  .tmsg.assistant { align-self: flex-start; background: var(--surface2); border: 1px solid var(--line); font-family: var(--serif); }
+  .tutor-empty { color: var(--ink-soft); font-size: 13.5px; font-style: italic; align-self: center; padding: 8px; }
+  .tutor-status { padding: 0 16px; min-height: 18px; font-size: 12.5px; color: var(--ink-soft); }
+  .tutor-controls { display: flex; gap: 8px; align-items: center; padding: 12px 16px 16px; flex-wrap: wrap; }
+  .tutor-controls .primary { flex: 0 0 auto; }
+  .tutor-controls .primary.live { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+  #tutorText { flex: 1 1 140px; min-width: 120px; font: inherit; font-size: 14px; background: var(--bg); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; }
+  @media (max-width: 520px) { .tutor { max-height: 82vh; } #tutorText { flex-basis: 100%; order: 3; } }
 </style>
 
 <div class="wrap">
@@ -187,6 +207,22 @@
     <button class="ghost small" id="homeBtn" hidden>End session</button>
   </div>
   <main id="app"></main>
+</div>
+
+<div id="tutorPanel" class="tutor" hidden>
+  <div class="tutor-head">
+    <span class="tutor-title">Tutor</span>
+    <span class="tutor-ctx" id="tutorCtx"></span>
+    <button class="tutor-x" id="tutorClose" aria-label="Close tutor">✕</button>
+  </div>
+  <div class="tutor-thread" id="tutorThread"></div>
+  <div class="tutor-status" id="tutorStatus"></div>
+  <div class="tutor-controls">
+    <button class="primary" id="tutorMic">🎤 Ask</button>
+    <input id="tutorText" placeholder="…or type your question" autocomplete="off">
+    <button class="ghost small" id="tutorSend">Send</button>
+    <button class="ghost small" id="tutorResume" hidden>▶ Resume reading</button>
+  </div>
 </div>
 
 <script>
@@ -530,6 +566,180 @@ function speakDocFrom(startIdx) {
   step(startIdx);
 }
 
+/* ---------- interactive tutor ---------- */
+const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+const TUTOR = { ctx: null, messages: [], sig: null, rec: null, listening: false, resumeIdx: null };
+
+function tEls() {
+  return {
+    panel: document.getElementById('tutorPanel'),
+    ctx: document.getElementById('tutorCtx'),
+    thread: document.getElementById('tutorThread'),
+    status: document.getElementById('tutorStatus'),
+    mic: document.getElementById('tutorMic'),
+    text: document.getElementById('tutorText'),
+    send: document.getElementById('tutorSend'),
+    resume: document.getElementById('tutorResume'),
+    close: document.getElementById('tutorClose'),
+  };
+}
+
+function docPlainText(id) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = DOCS.items[id].html;
+  return tmp.textContent.replace(/\s+/g, ' ').trim();
+}
+
+function tutorSystem() {
+  const c = TUTOR.ctx;
+  let s = `You are a warm, sharp study tutor helping a student prepare for the "Claude Certified Architect – Foundations" certification exam. Answer conversationally and briefly — your reply is READ ALOUD, so keep it to 2–4 sentences of plain spoken English. No markdown, no bullet points, no code blocks; if you must mention a function or config key, say it in words. Ground answers in the exam's doctrine: fix the root cause; use programmatic enforcement (hooks, prerequisite gates) whenever money or compliance is at stake; prefer the proportionate first step over new infrastructure; apply least privilege; and match the API to the latency requirement. Be encouraging and direct.`;
+  if (!c) return s;
+  if (c.kind === 'question') {
+    const q = c.q;
+    const opts = q.options.map((o, i) => `${'ABCD'[i]}. ${o}`).join('\n');
+    s += `\n\nThe student is looking at this practice question.\nScenario: ${SCENARIOS[q.id.split('-')[0]]}\nQuestion: ${q.stem}\nOptions:\n${opts}\nThe correct answer is ${'ABCD'[q.correct]}. Official explanation: ${q.explanation}` + (q.rule ? `\nThe rule it drills: ${q.rule}` : '');
+  } else if (c.kind === 'doc') {
+    s += `\n\nThe student is studying a document titled "${c.title}". Here is its full text:\n\n${c.text}`;
+    if (c.current) s += `\n\nThey are currently on this passage: "${c.current}"`;
+  }
+  return s;
+}
+
+function openTutor(ctx) {
+  stopSpeak();
+  const sig = ctx.kind + '|' + (ctx.id || (ctx.q && ctx.q.id) || '');
+  if (TUTOR.sig !== sig) { TUTOR.messages = []; TUTOR.sig = sig; }
+  TUTOR.ctx = ctx;
+  TUTOR.resumeIdx = (ctx.resumeIdx != null) ? ctx.resumeIdx : null;
+  const els = tEls();
+  els.panel.hidden = false;
+  els.ctx.textContent = ctx.kind === 'doc' ? ctx.title : ('Question · ' + SCENARIOS[ctx.q.id.split('-')[0]]);
+  els.resume.hidden = !(ctx.kind === 'doc' && TUTOR.resumeIdx != null);
+  els.text.value = '';
+  renderTutorThread();
+  if (SRClass) startListening();
+  else { setTutorStatus('idle'); els.text.focus(); }
+}
+
+function closeTutor() {
+  stopListening();
+  stopSpeak();
+  tEls().panel.hidden = true;
+}
+
+function setTutorStatus(s) {
+  const map = { idle: '', listening: '🔴 Listening — speak your question', thinking: '💭 Thinking…', speaking: '🔊 Answering…' };
+  tEls().status.textContent = map[s] || '';
+  const mic = tEls().mic;
+  mic.classList.toggle('live', s === 'listening');
+  mic.textContent = s === 'listening' ? '⏹ Stop' : '🎤 Ask';
+}
+
+function renderTutorThread() {
+  const el = tEls().thread;
+  if (!TUTOR.messages.length) {
+    el.innerHTML = `<div class="tutor-empty">${SRClass ? 'Tap the mic and ask anything about this.' : 'Type a question below and hit Send.'}</div>`;
+    return;
+  }
+  el.innerHTML = TUTOR.messages.map(m =>
+    `<div class="tmsg ${m.role}"><span class="who">${m.role === 'user' ? 'You' : 'Tutor'}</span>${esc(m.content)}</div>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function startListening() {
+  const els = tEls();
+  if (!SRClass) { els.text.focus(); return; }
+  stopSpeak();
+  const rec = new SRClass();
+  rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  let finalT = '';
+  rec.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalT += t; else interim += t;
+    }
+    els.text.value = (finalT + ' ' + interim).trim();
+  };
+  rec.onerror = (e) => {
+    TUTOR.listening = false; setTutorStatus('idle');
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed')
+      alert('Microphone is blocked. Allow mic access for this site, or type your question and hit Send.');
+  };
+  rec.onend = () => {
+    TUTOR.listening = false;
+    const q = els.text.value.trim();
+    if (q) { els.text.value = ''; submitTutor(q); }
+    else setTutorStatus('idle');
+  };
+  TUTOR.rec = rec; TUTOR.listening = true;
+  setTutorStatus('listening');
+  try { rec.start(); } catch (_) { TUTOR.listening = false; setTutorStatus('idle'); }
+}
+
+function stopListening() {
+  if (TUTOR.rec && TUTOR.listening) { try { TUTOR.rec.stop(); } catch (_) {} }
+  TUTOR.listening = false;
+}
+
+async function submitTutor(question) {
+  const key = audioPrefs().anthKey;
+  if (!key) { setTutorStatus('idle'); alert('Add your Anthropic API key under Audio → Tutor on the Practice tab to use the tutor.'); return; }
+  TUTOR.messages.push({ role: 'user', content: question });
+  renderTutorThread();
+  setTutorStatus('thinking');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 800,
+        system: [{ type: 'text', text: tutorSystem(), cache_control: { type: 'ephemeral' } }],
+        messages: TUTOR.messages,
+      }),
+    });
+    if (!res.ok) {
+      let msg = 'Tutor error ' + res.status + (res.status === 401 ? ' — check your Anthropic API key' : '');
+      try { const j = await res.json(); if (j.error && j.error.message) msg = j.error.message; } catch (_) {}
+      throw new Error(msg);
+    }
+    const j = await res.json();
+    const text = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').trim() || 'Sorry — I did not catch that. Try asking again.';
+    TUTOR.messages.push({ role: 'assistant', content: text });
+    renderTutorThread();
+    setTutorStatus('speaking');
+    speak(text, () => setTutorStatus('idle'));
+  } catch (e) {
+    setTutorStatus('idle');
+    TUTOR.messages.push({ role: 'assistant', content: '⚠️ ' + (e.message || 'Something went wrong.') });
+    renderTutorThread();
+  }
+}
+
+function initTutor() {
+  const els = tEls();
+  els.mic.addEventListener('click', () => { TUTOR.listening ? stopListening() : startListening(); });
+  els.send.addEventListener('click', () => {
+    const q = els.text.value.trim();
+    if (q) { els.text.value = ''; stopListening(); submitTutor(q); }
+  });
+  els.text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); els.send.click(); } });
+  els.close.addEventListener('click', closeTutor);
+  els.resume.addEventListener('click', () => {
+    const idx = TUTOR.resumeIdx;
+    stopListening();
+    els.panel.hidden = true;
+    if (idx != null) speakDocFrom(idx);
+  });
+}
+
 /* ---------- state + nav ---------- */
 let S = {};
 let timerId = null;
@@ -580,9 +790,10 @@ function showDoc(id) {
   app.innerHTML = `
     <div class="doc-toolbar">
       <button class="ghost small" id="docBack">← All docs</button>
+      <button class="ghost small" id="docAskBtn">🎤 Ask about this</button>
       ${hasTTS ? `<button class="ghost small" id="docListenBtn">▶ Listen to this doc</button>
       <span class="spacer"></span>
-      <span class="doc-hint">Double-click any paragraph to listen from there · R restarts</span>` : ''}
+      <span class="doc-hint">Double-click a paragraph to listen from there · R restarts</span>` : '<span class="spacer"></span>'}
     </div>
     <article class="doc">${d.html}</article>
     <div class="actions">
@@ -592,6 +803,12 @@ function showDoc(id) {
   $('#docBack').addEventListener('click', showStudy);
   $('#docBack2').addEventListener('click', showStudy);
   collectBlocks();
+  $('#docAskBtn').addEventListener('click', () => {
+    const readingEl = document.querySelector('article.doc .reading');
+    let curIdx = null, curText = '';
+    if (readingEl) { curIdx = docBlocks.indexOf(readingEl); curText = blockText(readingEl); }
+    openTutor({ kind: 'doc', id: currentDoc, title: DOCS.items[currentDoc].title, text: docPlainText(currentDoc), current: curText || null, resumeIdx: curIdx });
+  });
   if (hasTTS) {
     $('#docListenBtn').addEventListener('click', () => {
       if ($('#docListenBtn').classList.contains('speaking')) stopSpeak();
@@ -683,6 +900,14 @@ function home() {
       </div>
     </fieldset>
 
+    <fieldset>
+      <legend>Tutor — ask questions out loud</legend>
+      <div class="row" style="margin-top:0">
+        <label>Anthropic API key <input type="password" id="anthKey" placeholder="sk-ant-…" value="${esc(audioPrefs().anthKey || '')}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:190px"></label>
+      </div>
+      <p class="audio-note">Powers the “🎤 Ask” button on study docs and on questions you’ve answered — tap it, ask out loud like you would in class, and the tutor answers in whatever voice you picked above. Runs on Claude Haiku (~a cent per question, cheaper on follow-ups). Your key is stored only in this browser and sent only to Anthropic; works on the GitHub Pages site, not the claude.ai copy. ${SRClass ? 'For the most natural-sounding answers, select the ElevenLabs engine above.' : 'This browser can’t use the microphone — you’ll type questions instead. Chrome or Edge give you voice input.'}</p>
+    </fieldset>
+
     ${total ? `<div class="statline">
       <div>Questions seen<b>${seen} / ${BANK.questions.length}</b></div>
       <div>Lifetime accuracy<b>${Math.round(100 * right / total)}%</b></div>
@@ -710,6 +935,7 @@ function home() {
     saveAudioPrefs({ ...audioPrefs(), elVoice: e.target.value, elVoiceName: name });
   });
   $('#elModel').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), elModel: e.target.value }));
+  $('#anthKey').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), anthKey: e.target.value.trim() }));
   updateElStatus();
   window.scrollTo(0, 0);
 }
@@ -809,8 +1035,9 @@ function pick(pos) {
       <div class="ex">${fmt(q.explanation)}</div>
       ${q.rule ? `<div class="rule"><b>The rule this drills</b>${fmt(q.rule)}</div>` : ''}
     </div>`;
-  $('#nextSlot').innerHTML = `<button class="primary" id="nextBtn">${S.idx + 1 < S.queue.length ? 'Next question' : 'See results'}</button>`;
+  $('#nextSlot').innerHTML = `<button class="ghost small" id="askBtn">🎤 Ask the tutor</button> <button class="primary" id="nextBtn">${S.idx + 1 < S.queue.length ? 'Next question' : 'See results'}</button>`;
   $('#nextBtn').addEventListener('click', next);
+  $('#askBtn').addEventListener('click', () => openTutor({ kind: 'question', q }));
   $('#nextBtn').focus();
   if (hasTTS && audioPrefs().auto) speak(verdictSpeech(S.answers[S.answers.length - 1]));
 }
@@ -912,6 +1139,7 @@ function bar(label, e) {
   </div>`;
 }
 
+initTutor();
 showStudy();
 </script>
 
