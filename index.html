@@ -89,6 +89,7 @@
   .ghost { background: none; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 16px; font-size: 13.5px; color: var(--ink-soft); }
   .ghost:hover { border-color: var(--accent); color: var(--ink); }
   .ghost.small { padding: 4px 10px; font-size: 12px; border-radius: 6px; white-space: nowrap; }
+  .ghost.small.resume { border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
   .ghost.speaking { border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
   .audio-note { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
   .statline { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 18px; padding: 12px 16px; background: var(--surface2); border-radius: 10px; font-variant-numeric: tabular-nums; }
@@ -306,8 +307,8 @@ function applyDisplay() {
   const r = document.documentElement;
   r.style.setProperty('--serif', f.serif);
   r.style.setProperty('--sans', f.sans);
-  r.style.setProperty('--fscale', String(p.scale || 1));
   r.setAttribute('data-spacing', f.spacing ? 'on' : 'off');
+  if (document.body) document.body.style.zoom = String(p.scale || 1);
 }
 
 const DOMAINS = {
@@ -955,9 +956,12 @@ function showStudy() {
 
 function showDoc(id, anchor) {
   setTab('study'); stopSpeak(); currentDoc = id;
+  const inSession = !!(S.mode && !S.done);
+  homeBtn.hidden = true;
   const d = DOCS.items[id];
   app.innerHTML = `
     <div class="doc-toolbar">
+      ${inSession ? `<button class="ghost small resume" id="docResume">← Back to your ${S.mode === 'review' ? 'review' : S.mode === 'exam' ? 'exam' : 'drill'}</button>` : ''}
       <button class="ghost small" id="docBack">← All docs</button>
       <button class="ghost small" id="docAskBtn">🎤 Ask about this</button>
       ${hasTTS ? `<button class="ghost small" id="docListenBtn">▶ Listen to this doc</button>
@@ -978,6 +982,7 @@ function showDoc(id, anchor) {
     if (readingEl) { curIdx = docBlocks.indexOf(readingEl); curText = blockText(readingEl); }
     openTutor({ kind: 'doc', id: currentDoc, title: DOCS.items[currentDoc].title, text: docPlainText(currentDoc), current: curText || null, resumeIdx: curIdx });
   });
+  const drz = $('#docResume'); if (drz) drz.addEventListener('click', resumeSession);
   if (hasTTS) {
     $('#docListenBtn').addEventListener('click', () => {
       if ($('#docListenBtn').classList.contains('speaking')) stopSpeak();
@@ -1038,7 +1043,7 @@ function home() {
           ${Object.entries(FONTS).map(([k, f]) => `<option value="${k}" ${(fontPrefs().font || 'dyslexic') === k ? 'selected' : ''}>${f.label}</option>`).join('')}
         </select></label>
         <label>Size <select id="fsSel">
-          ${[['0.9', 'Small'], ['1', 'Medium'], ['1.15', 'Large'], ['1.3', 'X-Large']].map(([v, n]) => `<option value="${v}" ${String(fontPrefs().scale || 1) === v ? 'selected' : ''}>${n}</option>`).join('')}
+          ${[['0.9', 'Small'], ['1', 'Medium'], ['1.25', 'Large'], ['1.5', 'X-Large'], ['1.8', 'Huge']].map(([v, n]) => `<option value="${v}" ${String(fontPrefs().scale || 1) === v ? 'selected' : ''}>${n}</option>`).join('')}
         </select></label>
       </div>
       <p class="audio-note">Defaults to a dyslexia-friendly font with roomier letter and line spacing. Fonts are personal — try a few and keep what reads easiest. Applies everywhere: docs, questions, notes, and the tutor.</p>
@@ -1150,7 +1155,7 @@ function startDrill() {
 
 function startExam() {
   const scens = shuffle(Object.keys(SCENARIOS)).slice(0, 4);
-  const queue = scens.flatMap(s => BANK.questions.filter(q => q.id.startsWith(s + '-')));
+  const queue = scens.flatMap(s => shuffle(BANK.questions.filter(q => q.id.startsWith(s + '-'))));
   begin({ mode: 'exam', queue, deadline: Date.now() + queue.length * 2 * 60 * 1000 });
 }
 
@@ -1210,12 +1215,14 @@ function begin(cfg) {
 }
 
 /* ---------- question ---------- */
-function renderQ() {
+function renderQ() { paintQuestion(true); }
+
+function paintQuestion(fresh) {
   const q = S.queue[S.idx];
   const scen = q.id.split('-')[0];
   const newScen = S.idx === 0 || S.queue[S.idx - 1].id.split('-')[0] !== scen;
-  const order = shuffle([0, 1, 2, 3]);
-  S.current = { q, order, picked: null };
+  if (fresh || !S.current || S.current.q !== q) S.current = { q, order: shuffle([0, 1, 2, 3]), picked: null };
+  const order = S.current.order;
 
   app.innerHTML = `
     <div class="qhead">
@@ -1243,20 +1250,12 @@ function renderQ() {
   const lb = document.getElementById('listenBtn');
   if (lb) lb.addEventListener('click', speakCurrent);
   window.scrollTo(0, 0);
-  if (hasTTS && audioPrefs().auto) speak(questionSpeech(q, newScen));
+  if (S.current.picked != null) reveal(q, order, S.current.picked, false);
+  else if (hasTTS && audioPrefs().auto) speak(questionSpeech(q, newScen));
 }
 
-function pick(pos) {
-  if (S.current.picked != null) return;
-  stopSpeak();
-  const { q, order } = S.current;
-  S.current.picked = pos;
+function reveal(q, order, pos, speakNow) {
   const ok = order[pos] === q.correct;
-  S.answers.push({ q, order, pos, ok });
-  recordAnswer(q.id, ok);
-
-  if (S.mode === 'exam') { next(); return; }
-
   const correctPos = order.indexOf(q.correct);
   document.querySelectorAll('.opt').forEach((b, i) => {
     b.disabled = true;
@@ -1277,7 +1276,25 @@ function pick(pos) {
     $('#askBtn').addEventListener('click', () => openTutor({ kind: 'question', q }));
     $('#nextBtn').focus();
   }
-  if (hasTTS && audioPrefs().auto) speak(verdictSpeech(S.answers[S.answers.length - 1]));
+  if (speakNow && hasTTS && audioPrefs().auto) speak(verdictSpeech({ q, order, pos, ok }));
+}
+
+function resumeSession() {
+  if (!S.mode || S.done || !S.current) { home(); return; }
+  setTab('practice'); homeBtn.hidden = false;
+  paintQuestion(false);
+}
+
+function pick(pos) {
+  if (S.current.picked != null) return;
+  stopSpeak();
+  const { q, order } = S.current;
+  S.current.picked = pos;
+  const ok = order[pos] === q.correct;
+  S.answers.push({ q, order, pos, ok });
+  recordAnswer(q.id, ok);
+  if (S.mode === 'exam') { next(); return; }
+  reveal(q, order, pos, true);
 }
 
 function next() {
