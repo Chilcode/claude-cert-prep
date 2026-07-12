@@ -177,7 +177,8 @@
   }
 
   /* interactive tutor */
-  .tutor { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: min(680px, 100%); background: var(--surface); border: 1px solid var(--line-strong); border-bottom: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -8px 40px rgba(0,0,0,.18); z-index: 20; display: flex; flex-direction: column; max-height: 72vh; }
+  .tutor { position: fixed; right: 18px; bottom: 18px; left: auto; transform: none; width: min(400px, calc(100vw - 36px)); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 12px 48px rgba(0,0,0,.28); z-index: 40; display: flex; flex-direction: column; max-height: min(560px, 78vh); overflow: hidden; }
+  .tutor[hidden] { display: none; }
   .tutor-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
   .tutor-title { font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); white-space: nowrap; }
   .tutor-ctx { flex: 1; font-family: var(--serif); font-size: 13.5px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -194,7 +195,7 @@
   .tutor-controls .primary { flex: 0 0 auto; }
   .tutor-controls .primary.live { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
   #tutorText { flex: 1 1 140px; min-width: 120px; font: inherit; font-size: 14px; background: var(--bg); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; }
-  @media (max-width: 520px) { .tutor { max-height: 82vh; } #tutorText { flex-basis: 100%; order: 3; } }
+  @media (max-width: 520px) { .tutor { right: 0; bottom: 0; width: 100%; border-radius: 14px 14px 0 0; max-height: 82vh; } #tutorText { flex-basis: 100%; order: 3; } }
 </style>
 
 <div class="wrap">
