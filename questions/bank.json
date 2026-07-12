@@ -1,0 +1,910 @@
+{
+  "meta": {
+    "exam": "Claude Certified Architect - Foundations",
+    "built": "2026-07-11",
+    "source": "official exam guide v0.2 (2026-06-30)",
+    "count": 60
+  },
+  "questions": [
+    {
+      "id": "s1-q1",
+      "domain": 1,
+      "difficulty": "core",
+      "rule": "Loop control comes from stop_reason only \u2014 continue on \"tool_use\", terminate on \"end_turn\"; text parsing and iteration caps are anti-patterns.",
+      "stem": "A developer implemented the support agent's main loop to terminate when the assistant's reply text contains the phrase \"CASE CLOSED,\" with a hard cap of 10 iterations as a backstop. In production, 8% of sessions end mid-investigation with tool calls still pending, while other sessions keep looping after the customer's issue is fully resolved. What change most effectively fixes the loop control?",
+      "options": [
+        "Raise the iteration cap from 10 to 30 and strengthen the system prompt instruction that every final reply must end with \"CASE CLOSED\".",
+        "Rework the loop to continue while stop_reason is \"tool_use\" and terminate when stop_reason is \"end_turn\".",
+        "Terminate the loop whenever the response contains a text content block, since text output indicates the model has finished reasoning.",
+        "Add a signal_completion MCP tool the agent is instructed to call when done, and terminate the loop when that tool is invoked."
+      ],
+      "correct": 1,
+      "explanation": "stop_reason is the API's deterministic loop-control signal: \"tool_use\" means the model requested tools and expects results back; \"end_turn\" means it is done. Option B replaces two named anti-patterns (natural-language termination signals and an iteration cap as the primary stop) with the correct mechanism. Option A doubles down on both anti-patterns \u2014 a bigger cap still truncates or over-runs arbitrarily, and phrase emission remains probabilistic. Option C is itself a named anti-pattern: assistant turns can contain text alongside tool_use blocks, so text presence does not indicate completion. Option D adds an unnecessary tool whose invocation is still a probabilistic model behavior \u2014 the deterministic signal already exists in stop_reason."
+    },
+    {
+      "id": "s1-q2",
+      "domain": 1,
+      "difficulty": "stretch",
+      "rule": "Business rules with financial consequences go in interception hooks that block AND redirect to the alternative workflow \u2014 never prompt-only, never a generic failure.",
+      "stem": "Company policy caps autonomous refunds at $500. The rule is stated in three places in the system prompt, yet a monthly audit finds four refunds between $620 and $940 were processed autonomously. Which change most effectively enforces the policy?",
+      "options": [
+        "Set temperature to 0 and add an all-caps MUST NOT instruction \u2014 deterministic decoding guarantees the model follows the prompt's refund rule.",
+        "A tool-call interception hook that blocks the over-limit call and returns a generic \"Operation failed\" error so the refund never executes.",
+        "A tool-call interception hook that blocks process_refund calls with amount over $500 and returns a result directing the agent to call escalate_to_human with a structured handoff.",
+        "Route every proposed refund through a second reviewer agent that approves or rejects the amount before the tool executes."
+      ],
+      "correct": 2,
+      "explanation": "Option C gives a deterministic guarantee (the hook fires in code, regardless of what the model decides) and redirects to the correct alternative workflow \u2014 the guide's pattern is to block policy-violating actions AND route to escalation, so the customer still gets served. Option B blocks the call but returns a uniform generic error, which prevents appropriate recovery: the agent may retry, misreport a system outage, or dead-end instead of escalating. Option A is a misconception \u2014 temperature 0 makes sampling greedy, not compliant; prompt adherence remains probabilistic, which the audit already proved insufficient. Option D is over-engineered and still probabilistic: an LLM reviewer can also fail to enforce the threshold, and a simple numeric comparison needs code, not another model."
+    },
+    {
+      "id": "s1-q3",
+      "domain": 1,
+      "difficulty": "core",
+      "rule": "Multi-concern requests: decompose into distinct items, investigate each with shared context, synthesize one unified resolution.",
+      "stem": "A customer writes: \"I received the wrong size, I was charged twice for it, and now I'm locked out of my account.\" Transcript review shows the agent investigates and resolves only the duplicate charge, then ends its turn; the customer must re-send the other two issues. Multi-issue sessions now average 2.4 contacts against your one-contact resolution target. What's the most effective design change?",
+      "options": [
+        "Spawn a dedicated subagent per issue, each with its own isolated context, and concatenate their three independent replies to the customer.",
+        "Update the support intake form to require one issue per submission so every request maps to a single resolution path.",
+        "Set tool_choice to \"any\" so the agent is forced to keep calling tools each turn until every issue has been addressed.",
+        "Have the agent decompose multi-concern messages into distinct items, investigate each using the shared conversation context, then synthesize one unified resolution addressing all items."
+      ],
+      "correct": 3,
+      "explanation": "Option D is the guide's pattern for multi-concern requests: decompose, investigate each item (in parallel where possible) against shared context, then synthesize \u2014 the issues are related (the duplicate charge is on the wrong-size order), so shared context matters. Option A is over-engineered and loses that shared context: isolated subagents can't see that the three issues involve the same order and account, and this single-agent scenario doesn't need subagents. Option B shifts the burden to customers, degrading their experience without improving the system \u2014 a named anti-pattern shape. Option C solves a different problem: \"any\" forces some tool call on each turn but does nothing to guarantee coverage of all three concerns, and it prevents the agent from ever replying conversationally."
+    },
+    {
+      "id": "s1-q4",
+      "domain": 1,
+      "difficulty": "core",
+      "rule": "Escalation handoff = structured, self-contained summary (customer ID, root cause, refund amount, recommended action) \u2014 the human never sees the transcript.",
+      "stem": "Human agents reject or re-triage 60% of tickets escalated by the agent, reporting that tickets arrive saying only \"Customer needs help with a refund\" and they must re-contact customers for basic details. Human agents have no access to the AI conversation transcript. What's the most effective fix?",
+      "options": [
+        "Make escalate_to_human require a structured handoff \u2014 customer ID, root-cause analysis, refund amount, and recommended action \u2014 so every ticket is complete and self-contained.",
+        "Attach the full raw conversation history, including all tool results, to every escalated ticket so nothing is lost.",
+        "Build a dashboard that gives human agents live read access to the agent's session store for any escalated case.",
+        "Add a system prompt instruction: \"Always provide helpful context when escalating to a human.\""
+      ],
+      "correct": 0,
+      "explanation": "Option A implements the guide's structured handoff protocol for mid-process escalation: the exact fields (customer ID, root cause, refund amount, recommended action) give the human everything needed to act without transcript access, and requiring them in the tool schema makes the handoff deterministic. Option B dumps unprocessed data \u2014 40-field tool payloads and dozens of turns bury the key facts and force the human to reconstruct the analysis the agent already did. Option C is over-engineered infrastructure that still leaves humans reading raw transcripts instead of receiving a synthesized handoff. Option D is vague prompt-only guidance \u2014 \"helpful context\" is unenforced and unstructured, so completeness remains probabilistic."
+    },
+    {
+      "id": "s1-q5",
+      "domain": 2,
+      "difficulty": "core",
+      "rule": "Tool errors carry errorCategory + isRetryable + readable message; business denials are retriable: false with a customer-friendly explanation.",
+      "stem": "A customer requests a refund on an order delivered 47 days ago; the policy window is 30 days. process_refund correctly denies the request but returns {\"error\": \"Operation failed\"}. The agent retries the call twice more, then tells the customer \"our refund system is experiencing issues \u2014 please try again later.\" What change most effectively fixes this behavior?",
+      "options": [
+        "Add a system prompt rule: \"Never retry a process_refund call that returns an error.\"",
+        "Return structured error metadata via the MCP isError pattern: errorCategory \"business\", retriable: false, and a customer-friendly explanation of the return-window policy the agent can relay.",
+        "Have process_refund return an empty success result for policy denials so the agent stops retrying.",
+        "Add a loop-level retry cap of one attempt for all tool calls."
+      ],
+      "correct": 1,
+      "explanation": "The root cause is a uniform generic error: the agent cannot distinguish a business-rule denial from a transient fault, so it retries and then misinforms the customer. Option B fixes that root cause \u2014 the category tells the agent not to retry, and the readable message lets it explain the actual policy. Option A is prompt-only (probabilistic) and overcorrects: it would also stop legitimate retries of transient timeouts on process_refund. Option C is the named anti-pattern of silently returning failure as success \u2014 the agent would tell the customer nothing useful or, worse, imply the refund succeeded. Option D patches the symptom: retries stop, but the agent still can't explain the denial and genuine transient failures lose their recovery path."
+    },
+    {
+      "id": "s1-q6",
+      "domain": 2,
+      "difficulty": "core",
+      "rule": "Scope each agent to the 4-5 tools its role needs \u2014 too many visible tools degrades selection reliability even with good descriptions.",
+      "stem": "To \"future-proof\" the support agent, your team registers three additional departmental MCP servers, raising its visible tool count from 4 to 19 (loyalty, marketing, and logistics tools). All 19 descriptions are detailed and non-overlapping. Within a week, tool-misselection incidents rise from about 1% to 9% \u2014 for example, the agent calls check_loyalty_balance when asked about a refund's status. What's the most effective fix?",
+      "options": [
+        "Expand each of the 19 tool descriptions further with additional example queries and boundary explanations.",
+        "Add few-shot examples to the system prompt demonstrating correct tool selection across all 19 tools.",
+        "Restrict the support agent's configuration to the four or five tools its role actually requires, removing the other departments' tools from its tool set.",
+        "Add a keyword-based routing layer that inspects each request and enables only the subset of tools relevant to it."
+      ],
+      "correct": 2,
+      "explanation": "The guide's principle: giving an agent far more tools than its role needs (e.g., 18 instead of 4-5) degrades selection reliability by increasing decision complexity. The descriptions are already good, so the root cause is tool-set size \u2014 Option C applies scoped tool access and removes the complexity. Option A solves a different problem: descriptions are the primary selection mechanism, but they're already detailed here; more prose can't offset 19-way decision load. Option D is over-engineered infrastructure that bypasses the model's language understanding and adds a new brittle component. Option B adds token overhead and probabilistic guidance without reducing the decision complexity that caused the regression."
+    },
+    {
+      "id": "s1-q7",
+      "domain": 2,
+      "difficulty": "stretch",
+      "rule": "When good descriptions are still being ignored, audit the system prompt for keyword-sensitive wording creating unintended tool associations.",
+      "stem": "You've already rewritten get_customer and lookup_order descriptions to include input formats, example queries, edge cases, and explicit when-to-use boundaries. Yet the agent still calls get_customer for order-status queries like \"where is order ORD-55821?\" in 15% of cases. The system prompt opens with: \"Your first priority is always understanding the customer \u2014 begin every interaction by getting to know the customer's situation.\" What's the most likely effective fix?",
+      "options": [
+        "Revise the system prompt to remove the keyword-sensitive wording (\"getting to know the customer\") that creates an unintended association with the get_customer tool.",
+        "Rewrite the two tool descriptions again, adding more order-number format examples to lookup_order.",
+        "Consolidate get_customer and lookup_order into a single lookup_entity tool that accepts any identifier and routes internally.",
+        "Add pre-processing that forces tool_choice to lookup_order whenever the user's message contains the string \"ORD-\"."
+      ],
+      "correct": 0,
+      "explanation": "The guide notes that system prompt wording can override well-written tool descriptions: keyword-sensitive instructions create unintended tool associations. Here \"getting to know the customer\" semantically pulls the model toward get_customer on every interaction \u2014 that's the remaining root cause, since descriptions were already fixed. Option B re-solves an already-solved problem; the descriptions aren't the failure point anymore. Option C is a disproportionate architectural change that discards the clean identity-vs-order separation the prerequisite design depends on. Option D is an over-engineered keyword router that bypasses the model's language understanding and misfires whenever \"ORD-\" appears in a message that isn't an order-status query (or is absent from one that is)."
+    },
+    {
+      "id": "s1-q8",
+      "domain": 5,
+      "difficulty": "core",
+      "rule": "Facts with digits (amounts, dates, IDs, stated expectations) live in a persistent case-facts block outside summarized history.",
+      "stem": "In multi-issue sessions longer than about 25 turns, the conversation history is progressively summarized to stay within the context budget. Reviewers find that late in these sessions the agent quotes an $84.50 refund for a $119.99 order and re-offers store credit that the customer explicitly refused back in turn 3. What's the most effective fix?",
+      "options": [
+        "Switch to a model with a larger context window and disable summarization so the full transcript is always present.",
+        "Instruct the summarizer to \"preserve all important details, especially numbers\" when compressing the history.",
+        "Store the full transcript in a vector database and retrieve the most semantically relevant chunks into context each turn.",
+        "Extract transactional facts \u2014 amounts, dates, order IDs, statuses, and customer-stated expectations \u2014 into a persistent case-facts block included with every request, outside the summarized history."
+      ],
+      "correct": 3,
+      "explanation": "The root cause is a known progressive-summarization risk: numerical values, dates, and customer-stated expectations get condensed into vague prose. Option D is the guide's fix \u2014 keep transactional facts in a structured, persistent layer that never passes through summarization, so exact figures and the store-credit refusal survive every turn. Option A over-provisions: it raises cost and, on very long transcripts, key mid-conversation facts still degrade via the lost-in-the-middle effect. Option B is vague prompt-only guidance \u2014 summarization remains lossy and compliance is probabilistic, which is exactly what already failed. Option C is over-engineered infrastructure whose semantic retrieval can still miss the specific transactional fact needed on a given turn; deterministic persistence beats probabilistic retrieval for a handful of critical facts."
+    },
+    {
+      "id": "s1-q9",
+      "domain": 5,
+      "difficulty": "core",
+      "rule": "An explicit customer request for a human is a first-class escalation trigger \u2014 escalate immediately, no investigation first.",
+      "stem": "Transcript audits show that when customers explicitly say \"I want to talk to a human,\" the agent replies \"Let me first check your account,\" runs get_customer and lookup_order, and offers a resolution \u2014 escalating only after roughly 40% of these customers repeat the demand. CSAT for these interactions runs 31 points below baseline. What change best addresses this?",
+      "options": [
+        "Add sentiment analysis that automatically escalates whenever negative sentiment crosses a threshold.",
+        "Instruct the agent to honor explicit requests for a human by calling escalate_to_human immediately, without attempting investigation first.",
+        "Parallelize the get_customer and lookup_order calls so the agent can present its resolution offer faster.",
+        "Have the agent self-report a confidence score before each reply and escalate whenever confidence falls below a threshold."
+      ],
+      "correct": 1,
+      "explanation": "An explicit customer request for a human is a first-class escalation trigger that should be honored immediately \u2014 investigating first is exactly the failure the logs show, and it directly damages satisfaction. Option B fixes that root cause. Option A solves a different problem and uses an unreliable proxy: the trigger here is an explicit stated request, not tone, and sentiment doesn't correlate with the need to escalate (a calm customer can still demand a human; the separate rule for frustrated-but-simple cases is to acknowledge and offer resolution, not auto-escalate). Option C optimizes the wrong path \u2014 the customer asked for a person, so a faster unwanted resolution offer doesn't help. Option D relies on self-reported confidence, which the guide names as poorly calibrated and unrelated to this trigger."
+    },
+    {
+      "id": "s1-q10",
+      "domain": 5,
+      "difficulty": "stretch",
+      "rule": "Multiple customer matches \u2192 ask for an additional identifier; never select heuristically (in the prompt, the tool, or an ML layer).",
+      "stem": "get_customer returns three accounts matching \"M. Garcia\" in the same zip code. The agent selects the most recently active account and processes a $75 refund \u2014 to the wrong customer. What's the most effective design change?",
+      "options": [
+        "Modify get_customer to internally rank the candidates and return only the single highest-confidence match to the agent.",
+        "Configure the enforcement layer to invoke escalate_to_human automatically whenever get_customer returns more than one match.",
+        "Instruct the agent that when get_customer returns multiple matches, it must ask the customer for an additional identifier (order number, email, or billing phone) rather than selecting an account heuristically.",
+        "Train a fuzzy-matching model on historical resolution data to disambiguate between candidate accounts automatically."
+      ],
+      "correct": 2,
+      "explanation": "The guide is explicit: multiple customer matches require clarification \u2014 request additional identifiers \u2014 rather than heuristic selection. Option C puts the disambiguation decision with the only party who actually knows the answer: the customer. Option A just relocates the heuristic from the prompt into the tool; it hides the ambiguity from the agent entirely, so the same wrong-account refunds occur with less visibility. Option B is disproportionate: valid escalation triggers are explicit customer requests, policy gaps, and inability to make progress \u2014 and asking one clarifying question IS meaningful progress, so burning human capacity on every common-name match wrecks the 80% first-contact-resolution target. Option D is over-engineered ML infrastructure that still guesses; no confidence score eliminates the misidentification risk that a direct question resolves deterministically."
+    },
+    {
+      "id": "s2-q1",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "User-level ~/.claude/CLAUDE.md is never shared via version control; team standards belong in project-level CLAUDE.md.",
+      "stem": "You configured Claude Code with your team's coding standards six months ago, and it follows them consistently in your sessions. Two engineers who joined this sprint cloned the repository, but report that Claude ignores every standard \u2014 generated code uses `any` types and skips the required integration tests. What is the root cause and the most effective fix?",
+      "options": [
+        "Have the new engineers copy your ~/.claude/CLAUDE.md file to their own home directories so their sessions match yours.",
+        "The standards live in your ~/.claude/CLAUDE.md, which is user-level and not distributed via version control; move them to the project-level CLAUDE.md and commit it.",
+        "Enable \"syncSettings\": true in .claude/config.json so user-level configuration propagates to everyone who clones the repository.",
+        "Create a /standards slash command in .claude/commands/ that new engineers run at the start of each session to load the conventions."
+      ],
+      "correct": 1,
+      "explanation": "User-level configuration (~/.claude/CLAUDE.md) applies only to that user and is invisible to teammates \u2014 the repo clone carried no standards at all. Moving the instructions to project-level CLAUDE.md fixes the mechanism: every clone or pull gets them automatically. Option A patches two individuals but breaks again on the next hire and drifts whenever you update your copy \u2014 it shifts burden instead of fixing the root cause. Option C references a configuration mechanism that does not exist in Claude Code. Option D solves a different problem: slash commands are on-demand prompts, not always-loaded standards, and depend on developers remembering to invoke them every session."
+    },
+    {
+      "id": "s2-q2",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "Skills with verbose output get context: fork so they run in an isolated sub-agent context and return only the result.",
+      "stem": "Your team's /analyze-module skill maps a module's dependency graph and dumps roughly 15,000 tokens of raw dependency data into the conversation. Developers report that after running it, Claude's answers about unrelated parts of the codebase get noticeably worse for the rest of the session. What change most effectively addresses this?",
+      "options": [
+        "Add an instruction to the skill's prompt telling it to output only a brief summary and omit the raw dependency data.",
+        "Document that developers should run /compact immediately after each invocation of the skill.",
+        "Switch sessions that use the skill to a model with a larger context window so the dependency data fits without crowding out other context.",
+        "Add context: fork to the skill's SKILL.md frontmatter so it runs in an isolated sub-agent context and returns only its summary to the main conversation."
+      ],
+      "correct": 3,
+      "explanation": "context: fork is the designed mechanism for exactly this failure: the skill executes in an isolated sub-agent context, its verbose intermediate output never enters the main conversation, and only the result comes back. Option A relies on probabilistic prompt compliance and also degrades the analysis itself, since the skill may need the raw data internally to reason before summarizing. Option B is a manual, lossy symptom patch \u2014 compaction after pollution can still discard earlier findings and depends on developers remembering to run it. Option C misdiagnoses the problem as capacity: the issue is irrelevant tokens degrading attention and answer quality, which a larger window does not fix."
+    },
+    {
+      "id": "s2-q3",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "Preventing destructive actions during skill execution requires the deterministic allowed-tools frontmatter restriction, not prompt instructions.",
+      "stem": "A documentation-generation skill in .claude/skills/ only ever needs to read source files and write markdown, but it occasionally runs Bash commands during execution \u2014 one run executed `git checkout .` and wiped a developer's uncommitted changes. What is the most effective way to prevent this from recurring?",
+      "options": [
+        "Set allowed-tools in the skill's SKILL.md frontmatter to permit only Read, Grep, Glob, and Write during skill execution.",
+        "Add \"Never run git or destructive shell commands\" to the skill's prompt body.",
+        "Require developers to run the skill in plan mode so every proposed action is reviewed before execution.",
+        "Instruct developers to commit or stash all local changes before invoking the skill."
+      ],
+      "correct": 0,
+      "explanation": "allowed-tools is the deterministic enforcement mechanism: with Bash excluded from the frontmatter, the skill structurally cannot run shell commands, no matter what the model decides mid-execution. Option B is prompt-based guidance with a non-zero failure rate \u2014 unacceptable when the failure destroys work. Option C misapplies plan mode, which is a task-complexity workflow choice, not a skill sandboxing mechanism, and adds approval friction to every doc run. Option D shifts the burden to developers and merely reduces the blast radius of the defect instead of removing the skill's ability to cause it."
+    },
+    {
+      "id": "s2-q4",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "Match execution mode to task scope: direct execution for well-scoped single-file changes, plan mode for architectural or multi-file work.",
+      "stem": "After a botched refactor, your team mandated plan mode for every Claude Code task. Two sprints later, developers report that simple fixes \u2014 such as adding a null check to one function identified by a clear stack trace \u2014 now take roughly three times as long, while quality on large changes is unchanged from before the mandate. What policy change is most appropriate?",
+      "options": [
+        "Keep the blanket mandate but automatically approve any plan whose proposed diff is under 50 lines.",
+        "Drop plan mode entirely and instead provide comprehensive upfront instructions describing exactly how each change should be implemented.",
+        "Match mode to task scope: use direct execution for simple, well-scoped single-file changes, and reserve plan mode for multi-file changes, architectural decisions, and tasks with multiple valid approaches.",
+        "Route every incoming task through the Explore subagent first and let its findings determine which mode to use."
+      ],
+      "correct": 2,
+      "explanation": "Plan mode exists for complex work \u2014 large-scale changes, multiple valid approaches, architectural decisions \u2014 while direct execution is the documented fit for simple, well-scoped changes like a single-file bug fix with a clear stack trace. Matching mode to scope removes the overhead without sacrificing the safety plan mode provides where it matters. Option A keeps the ceremony while gutting its value: auto-approved plans are pure latency with no review. Option B swings to the opposite extreme and assumes you already know the right structure for complex changes, recreating the original rework risk. Option D over-engineers triage \u2014 the Explore subagent exists to isolate verbose discovery output during large tasks, not to classify trivially scoped fixes, and it adds a round trip to every one-line change."
+    },
+    {
+      "id": "s2-q5",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "Use @import so each package's CLAUDE.md pulls in only the standards files relevant to it, chosen by maintainer domain knowledge.",
+      "stem": "Your monorepo has six packages and a shared docs/standards/ directory containing nine standards files (API, frontend, database, deployment, and others). Loading all nine into every session bloats context, and Claude sometimes applies frontend conventions to database code. Each package's maintainers know exactly which standards apply to their package. What is the most maintainable configuration?",
+      "options": [
+        "Give each package its own CLAUDE.md that uses @import to include only the standards files relevant to that package.",
+        "Keep a single root CLAUDE.md containing all nine standards under clearly labeled section headers and rely on Claude to apply the correct section.",
+        "Convert each standards file into a skill in .claude/skills/ that maintainers invoke when working inside their package.",
+        "Register a package-to-standards mapping in .claude/config.json so Claude Code loads the correct files per package."
+      ],
+      "correct": 0,
+      "explanation": "The @import syntax exists precisely for modular CLAUDE.md organization: each package's file imports only the relevant standards, chosen by the maintainers who hold the domain knowledge, so sessions load focused context automatically. Option B is the monolith anti-pattern \u2014 it burns tokens on eight irrelevant standards and relies on the model inferring which section applies, which is exactly the cross-contamination already being observed. Option C converts always-applicable standards into on-demand skills, which require manual invocation and are skipped whenever a developer forgets. Option D references a configuration mechanism that does not exist in Claude Code."
+    },
+    {
+      "id": "s2-q6",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "When conventions apply inconsistently across sessions or machines, run /memory first to verify which memory files are actually loaded.",
+      "stem": "A convention in your project's CLAUDE.md \u2014 \"use the shared logger, never console.log\" \u2014 is followed in some developers' sessions but ignored in others, even though everyone is on an identical checkout of the repository. What is the most effective first step to diagnose the inconsistency?",
+      "options": [
+        "Rewrite the convention with stronger imperative wording such as \"MUST\" and \"CRITICAL\" so it is harder to ignore.",
+        "Run /memory in an affected developer's session to verify which memory files are actually being loaded.",
+        "Duplicate the convention into a directory-level CLAUDE.md in every source directory so it loads regardless of configuration state.",
+        "Have the affected developers reinstall Claude Code to reset any corrupted local configuration."
+      ],
+      "correct": 1,
+      "explanation": "The /memory command shows exactly which memory files a session loaded, which is the documented diagnostic for inconsistent behavior across sessions and machines \u2014 perhaps an affected developer's user-level file overrides the project file, or the project file is not loading at all. Diagnosing before changing anything is the proportionate first step. Option A rewrites a prompt without knowing whether it is even in context; if the file is not loaded, no wording helps. Option C sprays duplicate configuration everywhere without explaining the variance and creates a maintenance burden. Option D is a shotgun reset that solves a different (hypothetical) problem and destroys the evidence needed to find the real cause."
+    },
+    {
+      "id": "s2-q7",
+      "domain": 5,
+      "difficulty": "core",
+      "rule": "Counter context degradation in long exploration with scratchpad files, scoped subagent delegation, and /compact \u2014 not more context capacity.",
+      "stem": "Four hours into exploring a 400,000-line legacy codebase, Claude begins describing \"typical repository patterns\" instead of the specific classes it read earlier, and gives answers that contradict its own findings from the first hour. What is the most effective way to restore reliability for the remainder of the exploration?",
+      "options": [
+        "Switch the session to a model with a larger context window so all of the discovery output fits without truncation.",
+        "Restart the session and have Claude read every relevant file upfront before answering any further questions.",
+        "Ask each remaining question in three independent sessions and accept only answers that at least two sessions agree on.",
+        "Have the agent maintain scratchpad files recording key findings and reference them for later questions, delegate scoped investigations to subagents, and run /compact when verbose discovery output accumulates."
+      ],
+      "correct": 3,
+      "explanation": "The symptoms \u2014 generic \"typical patterns\" replacing specific discovered facts, self-contradiction \u2014 are classic context degradation in an extended session. Scratchpad files persist key findings outside the conversation, subagents isolate verbose exploration while the main agent keeps high-level coordination, and /compact reclaims context from accumulated discovery output; together these directly counter the failure mode. Option A misreads the problem as capacity when it is attention quality \u2014 a bigger window still degrades under thousands of lines of accumulated noise. Option B recreates the failure faster: reading everything upfront floods context before the first question is asked. Option C is over-engineered consensus voting that triples cost, and agreement between degraded sessions does not make an answer correct."
+    },
+    {
+      "id": "s2-q8",
+      "domain": 5,
+      "difficulty": "stretch",
+      "rule": "When prior tool results are broadly stale, start a fresh session with an injected structured summary instead of resuming.",
+      "stem": "You run --resume on a named session from last Thursday to continue a refactoring investigation. Since then, a large merge rewrote most of the module the session had analyzed, and Claude immediately proposes edits to three functions that no longer exist. What is the most reliable way to proceed?",
+      "options": [
+        "Stay in the resumed session and tell Claude exactly which files changed so it can re-analyze those files before continuing.",
+        "Stay in the resumed session and instruct Claude to re-verify every prior conclusion against the current code before proposing any edit.",
+        "Start a new session and inject a structured summary of the current codebase state and the key decisions from the prior investigation.",
+        "Use fork_session to branch a clean copy of the investigation and continue the work in the fork."
+      ],
+      "correct": 2,
+      "explanation": "Most of the analyzed module was rewritten, so the session's tool results are broadly stale \u2014 and starting fresh with a structured summary of current state plus prior decisions is documented as more reliable than resuming over stale results. Option A is the correct move only when changes are contained and the prior context is mostly valid; here \"most of the module\" was rewritten, so targeted re-analysis leaves the session reasoning atop a majority-invalid foundation. Option B is prompt-based mitigation with a non-zero failure rate \u2014 the stale conclusions remain in context and keep influencing reasoning even when told to re-verify. Option D solves a different problem entirely: fork_session branches divergent explorations from a shared baseline, and forking here just duplicates the same stale baseline."
+    },
+    {
+      "id": "s2-q9",
+      "domain": 5,
+      "difficulty": "stretch",
+      "rule": "Use fork_session to explore divergent approaches from a shared analysis baseline without duplicate analysis or cross-contamination.",
+      "stem": "Your team spent 45 minutes having Claude Code build a thorough analysis of a legacy payment module. Two developers now want to evaluate competing refactoring strategies \u2014 strangler-fig extraction versus in-place rewrite \u2014 each starting from that same analysis, without either strategy's reasoning influencing the other. What is the most efficient approach?",
+      "options": [
+        "Spawn two parallel subagents from the session, since subagents automatically inherit the parent session's analysis context.",
+        "Use fork_session to create two independent branches from the shared analysis baseline, one per strategy.",
+        "Explore both strategies sequentially in the original session, instructing Claude to disregard the first strategy's discussion before starting the second.",
+        "Start two fresh sessions and have each one re-analyze the payment module before exploring its assigned strategy."
+      ],
+      "correct": 1,
+      "explanation": "fork_session exists for exactly this: independent branches spun off a shared analysis baseline, so both strategies start from the same 45 minutes of investigation while remaining isolated from each other. Option A rests on a false premise \u2014 subagents do not automatically inherit parent context; their context must be explicitly provided in the prompt, so each would start blind. Option C guarantees contamination: the first strategy's reasoning stays in the conversation history and cannot actually be \"disregarded\" on instruction. Option D achieves isolation but pays for the expensive analysis twice, and the two re-analyses may not even reach identical conclusions, undermining the comparison."
+    },
+    {
+      "id": "s2-q10",
+      "domain": 5,
+      "difficulty": "stretch",
+      "rule": "Crash recovery for long multi-phase workflows requires structured state exports (manifests) loaded and injected on resume \u2014 not conversation history.",
+      "stem": "A multi-phase overnight workflow in Claude Code (map the codebase, draft documentation, cross-check against source) runs four to six hours. Twice this month it crashed during phase two, and both reruns started from zero because nothing from phase one survived. What design change most effectively enables recovery?",
+      "options": [
+        "Rely on --resume to reattach to the crashed session and continue from its conversation history.",
+        "Wrap the workflow in a supervisor script that automatically restarts the full run, up to a maximum of five attempts.",
+        "Have Claude periodically summarize its progress within the conversation so a recovery point exists after a crash.",
+        "Have each phase export structured state \u2014 key findings, completed items, open questions \u2014 as a manifest to a known file location, and on restart load the manifest and inject it into the next phase's prompts."
+      ],
+      "correct": 3,
+      "explanation": "Structured state persistence is the documented crash-recovery pattern: each phase exports a manifest to a known location, and on resume the coordinator loads it and injects it into prompts, so completed work survives regardless of what happened to the process. Option A bets recovery on conversation history surviving the crash intact, and even when it does, resuming over hours of stale, verbose tool results is less reliable than injecting a structured summary of confirmed state. Option B is a retry cap that restarts from zero each attempt \u2014 it bounds the number of failures without preserving any progress, the same flaw already observed twice. Option C puts the recovery point inside the very artifact that is lost in a crash: a summary living only in the conversation provides nothing once the session dies."
+    },
+    {
+      "id": "s3-q1",
+      "domain": 1,
+      "difficulty": "core",
+      "rule": "Loop termination = stop_reason only: continue on \"tool_use\", stop on \"end_turn\" \u2014 never text sentinels or iteration caps.",
+      "stem": "Your coordinator's agentic loop intermittently misbehaves: in 8% of runs it exits before the report generation subagent is ever invoked, and in others it hangs waiting for more turns. Reviewing the loop code, you find it terminates whenever the model's response text contains the phrase \"RESEARCH COMPLETE\" \u2014 a sentinel your coordinator prompt instructs the model to emit when finished. Logs show the model sometimes paraphrases (\"the research is now complete\") and sometimes emits the phrase mid-run while summarizing progress. What change would most effectively fix the loop control?",
+      "options": [
+        "Remove the sentinel entirely and drive the loop off stop_reason: continue executing tools while it is \"tool_use\" and terminate when it is \"end_turn\".",
+        "Strengthen the prompt with few-shot examples showing the exact sentinel format and instruct the model to emit \"RESEARCH COMPLETE\" only as the final line of its final message.",
+        "Replace the sentinel check with a hard cap of 25 loop iterations so runs can neither exit early nor hang indefinitely.",
+        "Broaden the termination check to a case-insensitive regex that also matches common paraphrases such as \"research is complete\" and \"research finished\"."
+      ],
+      "correct": 0,
+      "explanation": "The API already provides a deterministic termination signal: stop_reason is \"tool_use\" while the model wants tools executed and \"end_turn\" when it is done. Parsing natural-language signals for termination is a named anti-pattern \u2014 the observed paraphrasing and mid-run emissions are exactly why. Option B keeps the flawed mechanism and relies on probabilistic prompt compliance, so paraphrase failures will still occur at some rate. Option C swaps one anti-pattern for another: an arbitrary iteration cap as the stopping mechanism both truncates legitimate long runs and wastes turns on short ones \u2014 it belongs only as a safety backstop behind stop_reason. Option D patches the symptom by matching more strings; it can never enumerate every paraphrase and still fires on mid-run progress summaries."
+    },
+    {
+      "id": "s3-q2",
+      "domain": 1,
+      "difficulty": "core",
+      "rule": "Parallel subagents = multiple Task tool calls emitted in a single coordinator response, not one per turn.",
+      "stem": "End-to-end research runs average 14 minutes. Tracing reveals the coordinator decomposes each topic into four independent subtopics but spawns the four web search subagents strictly sequentially \u2014 one Task tool call per assistant turn, waiting for each subagent's results before spawning the next \u2014 even though no subtopic depends on another's output. What change would most effectively reduce run latency?",
+      "options": [
+        "Update the coordinator so that independent research tasks are delegated by emitting multiple Task tool calls within a single response, executing the subagents in parallel.",
+        "Set a parallel_tasks: 4 option in the coordinator's AgentDefinition so the Agent SDK automatically fans out Task invocations.",
+        "Deploy four coordinator instances behind a job queue, assigning one subtopic to each coordinator so the searches run on separate processes.",
+        "Reduce the decomposition to two subagents with broader subtopics so fewer sequential round trips are needed."
+      ],
+      "correct": 0,
+      "explanation": "The mechanism for parallel subagent execution is emitting multiple Task tool calls in one coordinator response rather than across separate turns; independent subtopics then complete concurrently. Option B references a configuration flag that does not exist in the Agent SDK \u2014 parallelism comes from the tool-call structure, not an AgentDefinition option. Option C is over-engineered infrastructure that abandons hub-and-spoke coordination (result aggregation, gap evaluation, and error handling now span four uncoordinated processes) to solve something the existing coordinator can do in one turn. Option D merely shrinks the problem instead of fixing it: the remaining spawns are still sequential, and coarsening the decomposition degrades coverage quality of each subtopic while leaving the underlying one-call-per-turn flaw in place."
+    },
+    {
+      "id": "s3-q3",
+      "domain": 1,
+      "difficulty": "core",
+      "rule": "Subagents have isolated context \u2014 anything they need must be placed explicitly in their prompt.",
+      "stem": "In 9 of your last 20 runs, the synthesis subagent produced summaries that contradict the search findings and cited sources that were never retrieved. Logs show the coordinator invokes it with the prompt \"Synthesize the research findings gathered so far into a coherent, cited summary\" \u2014 with no findings attached. The coordinator's own conversation history contains all of the search and analysis results. What is the correct fix?",
+      "options": [
+        "Have the coordinator include the complete structured findings from the search and analysis subagents directly in the synthesis subagent's prompt when invoking it.",
+        "Set include_parent_history: true in the synthesis subagent's AgentDefinition so it inherits the coordinator's conversation context.",
+        "Stand up a shared vector-store memory layer that all subagents write findings to and read from at the start of each invocation.",
+        "Give the synthesis subagent the web_search and extract_web_results tools so it can gather the findings it needs itself."
+      ],
+      "correct": 0,
+      "explanation": "Subagents operate with isolated context: they do not inherit the parent's conversation history or share memory between invocations, so the synthesis agent was invoked with nothing to synthesize and hallucinated to fill the gap. The fix is explicit context passing \u2014 include the complete prior findings directly in its prompt. Option B references a configuration flag that does not exist; there is no automatic context inheritance to switch on. Option C is over-engineered infrastructure for a problem solved by prompt construction, and it weakens the coordinator's controlled information flow. Option D breaks specialization \u2014 an agent given tools outside its role tends to misuse them, and it would be redundantly re-running research the system already paid for rather than synthesizing the findings that already exist."
+    },
+    {
+      "id": "s3-q4",
+      "domain": 1,
+      "difficulty": "stretch",
+      "rule": "When compliance must be guaranteed, use a hook (deterministic), not a prompt instruction (probabilistic).",
+      "stem": "Your three research MCP servers return timestamps in different formats: the web search server returns Unix epoch seconds, the document server returns ISO 8601 strings, and a community news server returns \"MM/DD/YYYY\". The synthesis agent misorders events in about 9% of reports. You added a system-prompt rule \u2014 \"convert all dates to ISO 8601 before comparing them\" \u2014 which cut errors to 4% but did not eliminate them. Correct temporal ordering is a hard requirement for the timeline sections your clients rely on. What change would most effectively address this?",
+      "options": [
+        "Implement a PostToolUse hook that intercepts every tool result and normalizes all date formats to a canonical form before the model processes them.",
+        "Add few-shot examples to the system prompt demonstrating correct conversion of each of the three date formats into ISO 8601.",
+        "Fork all three MCP servers and modify each one to emit ISO 8601 timestamps natively.",
+        "Insert a dedicated normalization subagent between the coordinator and the other agents that rewrites all findings into a canonical date format."
+      ],
+      "correct": 0,
+      "explanation": "The requirement is guaranteed compliance, and the prompt approach has already demonstrated a residual failure rate \u2014 more prompting cannot get to zero. A PostToolUse hook is the SDK's mechanism for exactly this: deterministic transformation of heterogeneous tool results (Unix timestamps, ISO 8601, other formats) in code before the model ever sees them. Option B stays in the probabilistic layer that already failed; few-shot examples reduce but cannot eliminate errors. Option C might work but is high-effort and creates a permanent maintenance burden across three codebases (one of them community-maintained) when a single hook achieves the same guarantee at one choke point. Option D is over-engineered and still unreliable \u2014 the normalization \"subagent\" is itself an LLM, so the conversion remains probabilistic while adding latency and cost."
+    },
+    {
+      "id": "s3-q5",
+      "domain": 2,
+      "difficulty": "core",
+      "rule": "MCP resources expose content catalogs so agents see what's available without burning exploratory tool calls.",
+      "stem": "Your document corpus contains 3,400 research documents behind an MCP server. Traces show the document analysis subagent spends its first 5-7 tool calls of every task issuing broad exploratory search_documents queries simply to discover what exists in the corpus before it can start real analysis, consuming roughly 30% of its context budget on discovery output. What is the most effective way to eliminate this overhead?",
+      "options": [
+        "Expose a corpus catalog \u2014 document titles, types, and dates \u2014 as an MCP resource so the agent has visibility into available content without exploratory tool calls.",
+        "Add a list_documents tool that returns the catalog, and instruct the agent to call it once at the start of each task.",
+        "Paste the full 3,400-document catalog into the document analysis subagent's system prompt so no discovery is ever needed.",
+        "Raise the subagent's maximum turn limit and context budget so the exploratory phase no longer crowds out analysis."
+      ],
+      "correct": 0,
+      "explanation": "This is the distinction MCP resources exist for: resources expose content catalogs (what data is available) while tools perform actions, and exposing a catalog as a resource gives the agent visibility into available data without requiring exploratory tool calls at all. Option B still spends tool calls and turns on discovery, keeps a large catalog payload inside the tool-result stream, and depends on the agent remembering (or being prompted) to call it \u2014 it converts the exploratory phase into a mandatory call rather than eliminating the overhead. Option C bloats every invocation with 3,400 entries whether or not they are relevant and goes stale as the corpus changes, trading one context problem for another. Option D is symptom accommodation: it pays for the waste with a bigger budget instead of removing the wasted discovery phase, and the exploratory output still dilutes the agent's attention."
+    },
+    {
+      "id": "s3-q6",
+      "domain": 2,
+      "difficulty": "core",
+      "rule": "tool_choice: \"any\" guarantees a tool call when \"auto\" would permit a plain-text reply; force a named tool only when one specific tool must run.",
+      "stem": "In about 7% of invocations, your web search subagent responds with conversational text (\"Here's what I found about AI in film scoring...\") instead of calling one of its tools to return structured findings, and the coordinator's result parser fails on those runs. Which of the subagent's several tools is appropriate legitimately varies by task. What configuration change guarantees the parser always receives tool output?",
+      "options": [
+        "Set tool_choice: \"any\" on the subagent's requests so the model must call a tool but can still choose the appropriate one.",
+        "Set tool_choice: {\"type\": \"tool\", \"name\": \"extract_web_results\"} so every response is forced through a single known tool.",
+        "Add a system prompt instruction stating the agent must always respond with a tool call and never with plain text.",
+        "Extend the coordinator's parser to detect text responses and convert them into the structured findings format before aggregation."
+      ],
+      "correct": 0,
+      "explanation": "tool_choice: \"any\" is the deterministic mechanism for exactly this failure: it guarantees the model calls a tool rather than returning conversational text, while leaving tool selection to the model \u2014 which matters here because the right tool varies by task. Option B over-constrains: forcing one named tool would break the tasks where a different tool is appropriate, and forced selection is the pattern for ensuring a specific tool runs first, not for general text suppression. Option C is prompt-based compliance \u2014 probabilistic, which is precisely what is already failing 7% of the time. Option D patches the symptom downstream: an LLM-or-regex conversion of free text into structured findings reintroduces the parsing fragility and provenance loss that structured tool output exists to prevent."
+    },
+    {
+      "id": "s3-q7",
+      "domain": 2,
+      "difficulty": "stretch",
+      "rule": "When misrouting persists after descriptions are already rich, eliminate functional overlap itself \u2014 rename or split the tools.",
+      "stem": "Three weeks ago you expanded the descriptions of two document-analysis-server tools, analyze_content (intended for web search results) and analyze_document (intended for PDFs and uploaded files), to include input formats, example queries, and boundary guidance. Misrouting dropped from 30% to 12% but persists: the agent still regularly sends PDF analysis requests to analyze_content. What is the most effective next step?",
+      "options": [
+        "Rename the tools to eliminate the functional overlap \u2014 for example, rename analyze_content to extract_web_results with a web-specific description \u2014 so their purposes are unambiguous from the names down.",
+        "Add 6-8 few-shot examples to the system prompt demonstrating correct routing between the two tools for representative queries.",
+        "Build a deterministic pre-router that inspects each request for URLs versus file paths and injects the correct tool choice before the model responds.",
+        "Consolidate both into a single analyze(source_type) tool that accepts either input and internally dispatches to the correct backend."
+      ],
+      "correct": 0,
+      "explanation": "Descriptions have already been improved and the residual misrouting traces to the remaining root cause: two near-identical names both starting with \"analyze_\" that signal overlapping purposes. Renaming to purpose-specific names (extract_web_results) is the guide's named remedy for exactly this pair \u2014 names carry selection signal alongside descriptions, and the fix is small and permanent. Option B adds token overhead in the wrong layer while leaving the overlapping identities that cause the confusion intact. Option C is over-engineered: a keyword router bypasses the model's language understanding and becomes a second routing system to maintain and debug. Option D can work but is the heaviest change \u2014 it rewrites the interface contract for every caller and hides the two distinct input/output contracts inside one opaque parameter, when a rename resolves the ambiguity directly."
+    },
+    {
+      "id": "s3-q8",
+      "domain": 5,
+      "difficulty": "core",
+      "rule": "Provenance is structural: subagents emit claim-source mappings that every downstream hop must preserve \u2014 citations cannot be reconstructed after prose summarization.",
+      "stem": "An audit of 30 final reports finds that 22% of claims carry citations pointing to the wrong sources, and 14 claims cite documents that were never retrieved during their runs. Tracing the pipeline, you find the search and analysis subagents return their findings as narrative prose paragraphs, and the synthesis agent's prompt instructs it to \"always cite your sources.\" What change would most effectively fix the citation integrity problem?",
+      "options": [
+        "Require every subagent to output structured claim-source mappings (claim, evidence excerpt, source URL, document name, publication date) and require the synthesis agent to preserve and merge those mappings rather than regenerating citations.",
+        "Strengthen the synthesis agent's prompt with few-shot examples demonstrating rigorous citation practice and explicit penalties for uncited claims.",
+        "Add a post-synthesis verification pass that re-searches the web for each claim in the draft report and attaches the best-matching source it finds.",
+        "Have the report generation agent rebuild the bibliography from the coordinator's execution logs, which record every source the search agents retrieved."
+      ],
+      "correct": 0,
+      "explanation": "Attribution was destroyed upstream: once findings are compressed into prose, the claim-to-source mapping no longer exists anywhere, so the synthesis agent can only invent citations no matter how firmly it is told to cite. The structural fix is to make provenance a data requirement \u2014 structured mappings emitted at the source and preserved through every hop. Option B is prompt-only pressure applied after the information is already gone; it cannot restore mappings that were never passed. Option C is over-engineered and unsound: re-searching finds plausible-looking sources, not the actual ones the claims came from, laundering the hallucination rather than fixing it. Option D solves a different problem \u2014 the logs prove which sources were retrieved but contain no linkage between individual claims and individual sources, which is exactly the missing piece."
+    },
+    {
+      "id": "s3-q9",
+      "domain": 5,
+      "difficulty": "stretch",
+      "rule": "Lost-in-the-middle is a position effect: put a key-findings summary at the beginning and use explicit section headers \u2014 a bigger context window doesn't fix attention position.",
+      "stem": "Your coordinator aggregates findings from five parallel subagents into a single 60K-token input for the synthesis agent. Across dozens of runs, the synthesized reports consistently represent the first and fifth subagents' findings well, while material from the second, third, and fourth subagents is thin or missing entirely. Logging confirms all five agents' findings are present in the synthesis prompt, well within the model's context window. What change would most effectively address this?",
+      "options": [
+        "Place a key-findings summary from all five subagents at the beginning of the aggregated input and organize the detailed results under explicit per-agent section headers.",
+        "Switch the synthesis agent to a model with a larger context window so all five findings sections receive adequate processing capacity.",
+        "Run the synthesis three times on the same input and include in the report only findings that appear in at least two of the three outputs.",
+        "Add a system prompt instruction directing the synthesis agent to give equal weight to every section of the input regardless of its position."
+      ],
+      "correct": 0,
+      "explanation": "The symptom \u2014 reliable coverage of the first and last sections with the middle dropped \u2014 is the lost-in-the-middle effect, a position-based attention pattern. The mitigation is structural input design: a key-findings summary up front puts every agent's critical material in the reliably-processed position, and explicit section headers help the model navigate the detail. Option B misdiagnoses it as a capacity problem; the input already fits, and a larger window does not change where attention concentrates. Option C is the consensus-voting anti-pattern: middle-section findings that surface only intermittently are exactly what majority filtering would suppress, making the omission worse. Option D asks the model to override its own attention behavior via instruction \u2014 a probabilistic request that does not change the positional processing causing the loss."
+    },
+    {
+      "id": "s3-q10",
+      "domain": 5,
+      "difficulty": "core",
+      "rule": "Crash recovery = structured per-agent state exports plus a coordinator-loaded manifest on resume \u2014 not restart-from-zero or trusting session history.",
+      "stem": "Your deep research runs average five hours and hundreds of paid search and analysis calls. Three of the last twenty runs died mid-execution from network failures, and each time the team restarted the research from zero, re-paying every completed search and analysis call. What design change most effectively addresses this?",
+      "options": [
+        "Have each agent export structured state (findings so far, sources covered, subtopics remaining) to a known location during the run, and have the coordinator load a manifest on resume and inject the prior state into agent prompts.",
+        "Wrap the pipeline in an automatic supervisor that detects failures and immediately relaunches the full research run without human intervention.",
+        "Resume the crashed coordinator session by name with --resume, relying on the preserved conversation history to restore the run's progress.",
+        "Cache every API response keyed by a hash of the request so that a restarted run replays completed calls from cache at no cost."
+      ],
+      "correct": 0,
+      "explanation": "Designed crash recovery means persisting structured agent state outside the live conversation: each agent exports what it has found and what remains, and on resume the coordinator loads a manifest and injects that state into agent prompts, so work resumes where it stopped and completed calls are never re-paid. Option B automates the exact failure mode \u2014 it still restarts from zero and re-pays everything, just faster. Option C relies on conversation history surviving the crash and being a usable recovery substrate; it is not structured state, is fragile after an abnormal termination, and by resume time may carry stale tool results that poison further reasoning \u2014 starting fresh with a structured summary is the more reliable pattern. Option D is speculative caching that does not hold in practice: an agentic run's requests depend on prior responses, so a restarted run's request sequence diverges after the first non-identical call and the cache stops hitting \u2014 and it restores no agent-level plan state."
+    },
+    {
+      "id": "s4-q1",
+      "domain": 1,
+      "difficulty": "core",
+      "rule": "Loop termination is decided by stop_reason (continue on \"tool_use\", stop on \"end_turn\") \u2014 never by text content, sentinel markers, or iteration caps.",
+      "stem": "Your Agent SDK codebase-exploration tool runs an agentic loop that executes requested tools and re-invokes Claude. To decide when a task is finished, the loop checks whether the latest assistant response contains a text block and exits if it does. In roughly 30% of runs the agent stops after only 2-3 tool calls, leaving investigations half-finished \u2014 logs show Claude was narrating its plan (\"Now I'll check the import graph...\") alongside its tool_use blocks when the loop exited. What change most effectively fixes the premature termination?",
+      "options": [
+        "Instruct the model in the system prompt to emit no explanatory text until the investigation is complete, so a text block reliably signals completion.",
+        "Base the control flow on stop_reason: continue executing tools while stop_reason is \"tool_use\" and terminate only when stop_reason is \"end_turn\".",
+        "Replace the text check with a fixed cap of 25 loop iterations so every investigation is guaranteed enough turns before stopping.",
+        "Have the model end its final message with a \"TASK_COMPLETE\" marker and terminate the loop when that marker appears in the response text."
+      ],
+      "correct": 1,
+      "explanation": "The agentic loop's contract is model-driven termination signaled by stop_reason: \"tool_use\" means more tools to run, \"end_turn\" means Claude has decided it is done. Checking for assistant text is a named anti-pattern \u2014 Claude routinely emits narration alongside tool calls, which is exactly what the logs show. The first option is prompt-based, probabilistic suppression of a behavior that is normal and harmless; it will still fail some fraction of the time and doesn't fix the broken termination logic. The 25-iteration cap swaps one anti-pattern for another: arbitrary caps as the primary stopping mechanism either cut off long tasks or waste turns on short ones (caps are acceptable only as a safety ceiling). The \"TASK_COMPLETE\" marker is the parsing-natural-language-signals anti-pattern \u2014 it reintroduces text parsing as the termination test instead of using the deterministic signal the API already provides."
+    },
+    {
+      "id": "s4-q2",
+      "domain": 1,
+      "difficulty": "core",
+      "rule": "Subagents run with isolated context and inherit nothing \u2014 everything they need must be passed explicitly in the Task prompt.",
+      "stem": "A coordinator agent spends twenty turns exploring a legacy service and catalogs its conventions: a custom error-wrapping pattern, repository-style data access, and strict naming rules. It then spawns a boilerplate-writer subagent via the Task tool with the prompt \"Generate CRUD handlers for the orders module.\" The generated handlers compile, but they use raw SQL and a completely different error pattern \u2014 ignoring every convention the coordinator documented. What is the root cause and the most effective fix?",
+      "options": [
+        "Subagents operate with isolated context and do not inherit the coordinator's conversation history; include the catalogued conventions and example snippets directly in the Task prompt when spawning the subagent.",
+        "The SDK's context-inheritance option is disabled by default; enable it on the boilerplate-writer's AgentDefinition so subagents automatically receive the parent conversation.",
+        "The subagent lacks discovery tools; grant it Grep, Glob, and Bash so it can rediscover the codebase conventions itself before generating the handlers.",
+        "The coordinator should accept the output and run a follow-up review pass that rewrites the generated handlers to match the documented conventions."
+      ],
+      "correct": 0,
+      "explanation": "Subagents spawned via the Task tool get a fresh, isolated context \u2014 they see nothing of the coordinator's twenty turns of discovery unless it is pasted into their prompt. The spawn prompt here contained only the task, so the subagent had no way to know the conventions existed; passing the complete findings explicitly in the prompt is the mechanism the SDK defines for this. A context-inheritance flag on AgentDefinition does not exist \u2014 context passing is always explicit. Granting discovery tools so the subagent re-explores duplicates twenty turns of work the coordinator already did, adds latency and tokens, and may still converge on different conclusions \u2014 it solves the problem by brute force rather than fixing the missing handoff. A rewrite-after-the-fact review pass patches the symptom downstream while leaving every future spawn broken, doubling generation cost per module."
+    },
+    {
+      "id": "s4-q3",
+      "domain": 1,
+      "difficulty": "stretch",
+      "rule": "Heterogeneous tool-result formats get normalized deterministically in a PostToolUse hook before the model sees them \u2014 not via prompt instructions.",
+      "stem": "Your productivity agent aggregates activity from three MCP servers: the Git server returns Unix epoch timestamps, the CI server returns ISO 8601 strings, and the ticketing server returns \"MM/DD/YYYY\" dates. The system prompt instructs the agent to convert everything to ISO 8601 before comparing, yet in about 8% of \"what changed right before this incident?\" tasks it orders events incorrectly, and it occasionally misreads the CI server's numeric status codes. What is the most reliable fix?",
+      "options": [
+        "Add few-shot examples to the system prompt demonstrating correct timestamp conversion from each of the three source formats into ISO 8601.",
+        "Ask the maintainers of the three MCP servers to standardize their outputs on ISO 8601 timestamps and named status strings.",
+        "Implement a PostToolUse hook that deterministically normalizes timestamps to a single format and maps status codes to named values before the model processes each tool result.",
+        "Spawn a dedicated normalization subagent and route every tool result through it for conversion before the result reaches the main agent."
+      ],
+      "correct": 2,
+      "explanation": "Format normalization is a mechanical, rule-based transformation \u2014 exactly what PostToolUse hooks exist for. Intercepting each tool result and normalizing it deterministically guarantees the model only ever reasons over consistent data, driving the 8% error rate to zero for this failure class. Few-shot conversion examples keep the work probabilistic: the model already has instructions and still fails 8% of the time, and errors here corrupt incident timelines. Petitioning three server maintainers shifts the burden to parties you may not control, delivers nothing until all three ship changes, and breaks again when a fourth server is added. A dedicated normalization subagent is over-engineered \u2014 it spends model tokens and adds a full agent round-trip per tool call to do work that a few lines of deterministic code handle, and being LLM-based it is itself probabilistic."
+    },
+    {
+      "id": "s4-q4",
+      "domain": 1,
+      "difficulty": "stretch",
+      "rule": "When prior session context is mostly valid, resume and explicitly declare which files changed for targeted re-analysis; go fresh-with-summary only when staleness is broad.",
+      "stem": "On Monday you ran a named Agent SDK session that mapped your billing module \u2014 about 40 files of analysis. Overnight, a teammate refactored 2 of those files, renaming three functions. On Tuesday you --resume the named session, and the agent confidently proposes changes that reference the old, now-deleted function signatures. The rest of Monday's analysis remains accurate. What is the most effective way to continue?",
+      "options": [
+        "Resume the named session and explicitly tell the agent which two files were refactored so it re-reads just those files and updates its understanding before proceeding.",
+        "Discard the session and start fresh, having the agent re-explore all ~40 files from scratch so no stale conclusions can survive.",
+        "Use fork_session to branch off Monday's session and continue Tuesday's work in the fork, keeping the original session's analysis intact.",
+        "Resume the session and instruct the agent to treat all of its prior findings as unverified, re-deriving each one before relying on it."
+      ],
+      "correct": 0,
+      "explanation": "The guide's rule for resuming after code changes: inform the resumed session about the specific files that changed so it performs targeted re-analysis. Here staleness is narrow (2 of ~40 files), so resuming with a precise change declaration preserves the 95% of context that is still valid and fixes exactly what's wrong. Full re-exploration from scratch is the right move only when prior tool results are broadly stale; here it throws away a day of valid analysis and burns tokens and time disproportionate to a two-file refactor. fork_session solves a different problem \u2014 creating independent branches to explore divergent approaches from a shared baseline; the fork inherits the same stale tool results, so the wrong signatures come along with it. Marking all findings unverified forces the agent to re-derive 40 files' worth of conclusions anyway \u2014 full re-exploration with extra steps \u2014 instead of targeting the two files actually affected."
+    },
+    {
+      "id": "s4-q5",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "Skills that produce verbose output run with context: fork so their intermediate output stays in an isolated sub-agent context.",
+      "stem": "Your team's /map-module skill performs a deep dependency analysis that emits several thousand lines of intermediate output before producing a one-page summary. Developers report that after invoking it, the rest of their session degrades: Claude starts quoting raw analysis dumps instead of the summary, and unrelated follow-up requests behave worse because the context window is nearly full. What is the most effective configuration change?",
+      "options": [
+        "Set allowed-tools in the skill's frontmatter to Read and Grep only, so the analysis is restricted and produces less output.",
+        "Move the skill's analysis instructions into the project CLAUDE.md so the behavior is always loaded and no separate invocation is needed.",
+        "Document that developers should run /compact immediately after invoking the skill to shrink the accumulated analysis output.",
+        "Add context: fork to the skill's SKILL.md frontmatter so it executes in an isolated sub-agent context and only its summary returns to the main conversation."
+      ],
+      "correct": 3,
+      "explanation": "context: fork is the frontmatter option designed for exactly this: the skill runs in an isolated sub-agent context, its thousands of lines of intermediate output never enter the main session, and only the final summary comes back. That removes both symptoms \u2014 no raw dumps to quote and no context exhaustion. Restricting allowed-tools addresses tool safety, not output volume \u2014 the analysis still needs those tools and still emits its verbose working; it solves a different problem. Moving the instructions into CLAUDE.md makes things strictly worse: CLAUDE.md is for always-loaded universal standards, so a heavyweight analysis workflow would burden every session, not just invocations. Running /compact afterward is symptom patching \u2014 the pollution already happened, compaction can lose the very details the developer wanted, and it relies on every developer remembering a manual cleanup step every time."
+    },
+    {
+      "id": "s4-q6",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "User-level ~/.claude/CLAUDE.md never travels via version control; diagnose what's loaded with /memory and move shared standards to project scope.",
+      "stem": "You configured Claude Code with your team's testing standards and it applies them consistently on your machine. A new engineer clones the repository, but her sessions generate tests that ignore the standards entirely. The repo's root CLAUDE.md contains only a project overview. What is the most likely cause, and what should you do first?",
+      "options": [
+        "Her Claude Code installation predates memory-file support; have her reinstall the latest version and re-clone the repository.",
+        "The standards live in your user-level ~/.claude/CLAUDE.md, which is never distributed through version control; run /memory in her session to confirm which memory files load, then move the standards into project scope.",
+        "CLAUDE.md files require running claude config sync on each new workstation before they take effect; run it on her machine.",
+        "Have her paste the testing standards into her prompt at the start of each session until her generated tests stabilize on the conventions."
+      ],
+      "correct": 1,
+      "explanation": "The telltale is asymmetry: works on your machine, absent on hers, and the shared repo CLAUDE.md doesn't contain the standards. That means they live in your user-scoped ~/.claude/CLAUDE.md, which applies only to you and is never distributed via git. /memory is the diagnostic command that shows exactly which memory files a session loaded, confirming the hypothesis before you fix it by moving the standards to project scope (root CLAUDE.md or .claude/rules/). Blaming an outdated installation is speculative and doesn't explain why the repo's own CLAUDE.md lacks the standards. A claude config sync command does not exist \u2014 configuration hierarchy questions are resolved by file placement, not a sync step. Pasting standards into every prompt shifts a permanent configuration problem onto the new engineer as a recurring manual chore, and it evaporates the moment she forgets."
+    },
+    {
+      "id": "s4-q7",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "Delegate verbose discovery phases to the Explore subagent so only structured summaries enter the main conversation.",
+      "stem": "You are using Claude Code for a multi-phase modernization of a legacy reporting system: discovery, then design, then implementation across many files. During discovery, reading dozens of files fills most of the context window; by the implementation phase Claude has lost track of design decisions made an hour earlier and re-asks questions it already answered. What is the most effective way to restructure the workflow?",
+      "options": [
+        "Delegate the discovery phase to the Explore subagent so verbose file-reading output stays isolated and only structured summaries enter the main conversation for the design and implementation phases.",
+        "Switch to a model tier with a much larger context window so all discovery output plus design decisions fit within a single session.",
+        "Read every relevant file at the very start of the session so all information is loaded into context before any design work begins.",
+        "Split the work into three separate sessions \u2014 discovery, design, implementation \u2014 each starting from an empty context to keep every phase lean."
+      ],
+      "correct": 0,
+      "explanation": "The failure is context exhaustion caused by verbose discovery output crowding out later phases. The Explore subagent exists for precisely this: it absorbs the file dumps in its own isolated context and hands back summaries, so the main session retains its design decisions through implementation. A larger context window is the over-provisioned infrastructure distractor \u2014 it delays rather than solves the problem, costs more, and long undifferentiated contexts still suffer degraded recall of mid-context details. Reading everything upfront is the named anti-pattern (the guide's exploration playbook is incremental: Grep entry points, then Read to follow imports) and it fills the window even faster. Three blank-slate sessions destroy continuity \u2014 implementation needs the design decisions, and starting fresh works only when structured summaries are deliberately carried across, which this option omits."
+    },
+    {
+      "id": "s4-q8",
+      "domain": 2,
+      "difficulty": "stretch",
+      "rule": "MCP resources expose consultable content catalogs; tools are for actions \u2014 catalogs of what exists belong in resources, not extra tool calls.",
+      "stem": "Your engineering-docs MCP server exposes two tools: get_document(id) and search_docs(query). Telemetry shows agents spend the first 5-8 tool calls of nearly every task issuing broad search_docs probes just to learn what documentation even exists \u2014 runbooks? ADRs? schema docs? \u2014 before starting the real work. What change best eliminates this exploratory overhead?",
+      "options": [
+        "Cache the results of previous sessions' search_docs probes and automatically replay them into each new session's starting context.",
+        "Paste the full documentation index into the agent's system prompt so it never needs to discover what exists.",
+        "Expose the documentation hierarchy as MCP resources so agents have visibility into the catalog of available content without spending tool calls to discover it.",
+        "Add a list_all_documents tool that returns every document's title and summary in a single call at the start of each task."
+      ],
+      "correct": 2,
+      "explanation": "MCP draws a deliberate line between the two primitives: tools perform actions, resources expose content the agent can consult. A catalog of what documentation exists is consultable content \u2014 publishing the hierarchy as resources gives every agent visibility into available data with zero exploratory calls, which is exactly the pattern the guide prescribes for reducing discovery overhead. A list_all_documents tool is the tempting near-miss: it compresses 5-8 probes into one, but it still spends a tool call and a model round-trip every task on discovering static structure, and it misuses the action primitive for content. Pasting the index into the system prompt bloats every request with tokens whether or not docs are needed and goes stale the moment documentation changes, requiring manual prompt maintenance. Replaying cached probes is speculative caching \u2014 prior sessions' queries don't predict what the next task needs, and stale replayed results can actively mislead the agent."
+    },
+    {
+      "id": "s4-q9",
+      "domain": 2,
+      "difficulty": "core",
+      "rule": "Structured error responses (isError + errorCategory + isRetryable) let the agent retry transient failures and immediately stop retrying permission failures.",
+      "stem": "Your custom code-search MCP tool returns the bare string \"Operation failed\" for every failure. Logs reveal two distinct failure modes: the search index rebuilds nightly and times out requests for about 10 minutes, and some repositories fall outside the access token's scope. Agents currently retry both cases 3-4 times, wasting several minutes per task on permission failures that can never succeed. What is the most effective fix?",
+      "options": [
+        "Add a global cap of one retry for any failed tool call so no failure mode can waste more than one extra attempt.",
+        "Update the system prompt: \"If a tool fails twice in a row, assume it is a permissions problem and stop retrying.\"",
+        "Return an empty result set with success status for repositories the token cannot access, so the agent simply moves on instead of retrying.",
+        "Return structured error responses using the isError flag with an errorCategory (transient vs permission), an isRetryable boolean, and a human-readable message, so the agent retries timeouts but immediately reports access failures."
+      ],
+      "correct": 3,
+      "explanation": "The root cause is that a uniform \"Operation failed\" strips away the information the agent needs to choose a recovery strategy. Structured error metadata \u2014 errorCategory distinguishing transient from permission, isRetryable telling the agent whether retry can ever succeed, and a readable message it can act on or relay \u2014 restores that decision-making: timeouts get retried, access failures get surfaced immediately. A global one-retry cap patches the symptom symmetrically and wrongly: it cripples recovery from the nightly index rebuild (which genuinely warrants retries) while still wasting one doomed attempt on every permission failure. The prompt heuristic is probabilistic and factually wrong \u2014 two consecutive failures during the 10-minute rebuild window are transient, so the agent would abandon searches that a third attempt would satisfy. Returning empty results as success is a named anti-pattern: it silently suppresses the failure, makes inaccessible repos indistinguishable from repos with genuinely no matches, and leads the agent to report confidently incomplete findings."
+    },
+    {
+      "id": "s4-q10",
+      "domain": 2,
+      "difficulty": "core",
+      "rule": "Team-shared MCP servers go in project-scoped .mcp.json with ${ENV_VAR} credential expansion; ~/.claude.json is personal and never shared.",
+      "stem": "You set up the GitHub MCP server in your personal ~/.claude.json and it works well, so the whole team wants it. One teammate copied your configuration into the repository as-is \u2014 including your hardcoded GitHub token, which then had to be revoked. Teammates who copied nothing still lack the server entirely. What is the correct way to share this integration?",
+      "options": [
+        "Commit each developer's ~/.claude.json to the repository so everyone's personal MCP server configurations are shared automatically.",
+        "Define the server in a project-scoped .mcp.json committed to the repository, referencing the credential as ${GITHUB_TOKEN} so each developer supplies their own token through an environment variable.",
+        "Keep the server user-scoped and add a README section walking each developer through creating their own ~/.claude.json entry with their own token.",
+        "Commit an .mcp.json containing the token in encrypted form, plus a startup script that decrypts it into place before Claude Code launches."
+      ],
+      "correct": 1,
+      "explanation": "Project-scoped .mcp.json is the mechanism built for exactly this: the server definition is version-controlled so every teammate gets it on clone or pull, and ${GITHUB_TOKEN} environment-variable expansion keeps credentials out of git entirely \u2014 each developer supplies their own token locally. This fixes both failures at once (no distribution gap, no leaked secret). Committing ~/.claude.json files misuses the personal scope \u2014 that file holds individual, experimental configuration, and committing it would both leak whatever tokens it contains and clobber teammates' personal settings. The README walkthrough keeps a team dependency in per-user config: every new hire repeats manual setup, entries drift as the server config evolves, and nothing enforces consistency \u2014 burden shifted onto developers instead of solved by the system. Encrypting a token inside the committed file with a decrypt-on-launch script is over-engineered and still ships a secret (plus, eventually, its key) through version control when env-var expansion makes the whole apparatus unnecessary."
+    },
+    {
+      "id": "s5-q1",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "CI runners only see version-controlled project config \u2014 user-level ~/.claude/CLAUDE.md never reaches them; verify what loads with /memory.",
+      "stem": "Your automated PR reviews follow your team's review criteria perfectly when you run Claude Code on your laptop, but the same prompt in the CI pipeline produces generic feedback that ignores the criteria entirely. A contractor who just cloned the repo reports the same generic behavior on her machine. What's the most effective first step?",
+      "options": [
+        "Bake the review criteria into the CI runner's base image so every pipeline job starts with the correct configuration files preinstalled.",
+        "Pass the review criteria to the CI invocation through the CLAUDE_RULES environment variable so the pipeline loads them at runtime.",
+        "Move the review criteria from ~/.claude/CLAUDE.md into the project-level CLAUDE.md, commit it, and use /memory to verify which memory files load in each environment.",
+        "Prepend the full review criteria to the prompt string in the CI script on every invocation."
+      ],
+      "correct": 2,
+      "explanation": "The symptom pattern \u2014 works for you, fails in CI AND for a fresh clone \u2014 is the classic configuration-hierarchy diagnosis: the criteria live in user-level ~/.claude/CLAUDE.md, which is not version-controlled and never reaches the CI runner or teammates. Moving them to project-level CLAUDE.md (committed to the repo) fixes the root cause, and /memory is the documented diagnostic for verifying which memory files actually load. Option A patches the symptom in CI infrastructure but leaves teammates broken and creates config drift between the image and the repo. Option B references a CLAUDE_RULES environment variable that does not exist. Option D duplicates project context into every prompt, bypassing the mechanism CLAUDE.md exists for and requiring every script and developer to maintain the copy."
+    },
+    {
+      "id": "s5-q2",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "On re-review after new commits, feed the prior run's findings into context and instruct Claude to report only new or still-unaddressed issues.",
+      "stem": "Your CI review bot runs on every push to a PR. After a developer pushes commits fixing 9 of the 11 issues from the first review, the second run reposts all 11 original comments plus 2 new ones, and developers are starting to complain about comment spam. What change would most effectively address this?",
+      "options": [
+        "Include the prior run's findings in the new run's context and instruct Claude to report only issues that are new or previously reported and still unfixed.",
+        "Add a post-processing step to the comment-posting script that string-matches new findings against existing PR comments and suppresses near-duplicates.",
+        "Resume the first review's session with --resume so the model retains its earlier findings and naturally avoids repeating them.",
+        "Delete all existing bot comments at the start of each run and repost the current findings as a clean slate."
+      ],
+      "correct": 0,
+      "explanation": "The model reposts old findings because each CI run is stateless \u2014 it has no knowledge of what previous runs reported. Including the prior findings in context with an explicit 'only new or still-unaddressed' instruction fixes that root cause and lets the model reason about whether each old issue was actually resolved by the new commits. Option B patches the symptom downstream: string matching can't tell a still-unfixed issue from a resolved one, and rewording defeats the match. Option C resumes a session whose tool results are stale \u2014 the code has changed since that analysis, which is exactly when starting fresh with injected context is more reliable than resuming. Option D still notifies developers with a wall of reposted comments and destroys the comment-thread history where discussion happened."
+    },
+    {
+      "id": "s5-q3",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "Test-generation quality comes from context: provide existing test files plus valuable-test criteria and fixture docs in CLAUDE.md \u2014 the model can't avoid duplicating what it can't see.",
+      "stem": "Your nightly test-generation job produces suggestions developers reject at a 60% rate: roughly half duplicate scenarios already covered in tests/unit/, and the rest are trivial getter/setter tests. The job currently receives only the source file under test in its prompt. What change would most effectively improve acceptance?",
+      "options": [
+        "Add a post-generation similarity filter that computes embedding distance between each proposed test and the existing suite, discarding matches above a threshold.",
+        "Add the instruction 'do not propose tests that already exist, and skip trivial tests' to the generation prompt.",
+        "Switch the nightly job to a higher-tier model with a larger context window so it can reason more carefully about test value.",
+        "Include the module's existing test files in the prompt, and document valuable-test criteria and available fixtures in the project CLAUDE.md."
+      ],
+      "correct": 3,
+      "explanation": "Both failure modes are missing-context problems. The model duplicates existing scenarios because it has never seen the existing suite, and it produces low-value tests because nothing defines what a valuable test is for this team. Providing existing test files in context plus documented testing standards and fixtures in CLAUDE.md is the documented mechanism for exactly these two failures. Option B is prompt-only compliance against information the model doesn't have \u2014 it cannot avoid duplicating tests it can't see. Option A is over-engineered downstream filtering that discards wasted generations instead of preventing them, and does nothing about trivial tests. Option C misdiagnoses the problem as model capability: no model can check against a test suite that isn't in its context."
+    },
+    {
+      "id": "s5-q4",
+      "domain": 3,
+      "difficulty": "core",
+      "rule": "Machine-parseable CI findings require --output-format json with --json-schema \u2014 prompt-level 'return JSON' requests are probabilistic and unenforced.",
+      "stem": "Your CI review step pipes Claude Code's output into a script that posts inline PR comments. The prompt ends with 'Respond only with a JSON array of findings,' but in roughly 8% of runs the script crashes: the output contains markdown fences around the JSON, an introductory sentence, or a missing field. What's the correct fix?",
+      "options": [
+        "Set CLAUDE_OUTPUT_FORMAT=json in the pipeline environment so Claude Code serializes its response before printing.",
+        "Invoke Claude Code with --output-format json and --json-schema pointing to a committed findings schema, then parse the structured result.",
+        "Harden the posting script to strip markdown fences and leading prose with a regex before parsing, and retry the run on parse failure.",
+        "Strengthen the prompt with an explicit warning that any non-JSON output will break the pipeline and cause the review to fail."
+      ],
+      "correct": 1,
+      "explanation": "The root cause is that JSON was requested through prompt text, which is probabilistic \u2014 nothing enforces the format. The documented CI mechanism is --output-format json combined with --json-schema, which produces machine-parseable, schema-enforced findings and eliminates the syntax failures crashing the script. Option A references an environment variable that does not exist. Option C patches symptoms downstream: regex stripping handles the failure shapes you've seen but not the next one (e.g., a missing required field), and retries burn CI time on a problem the CLI already solves deterministically. Option D is still prompt-only compliance \u2014 a sterner warning changes the probability, not the guarantee, and an 8% failure rate on a blocking pipeline needs a guarantee."
+    },
+    {
+      "id": "s5-q5",
+      "domain": 3,
+      "difficulty": "stretch",
+      "rule": "A session that generated code retains its generation reasoning and won't question its own decisions \u2014 review must run in a fresh, independent instance.",
+      "stem": "Your pipeline uses Claude Code to apply automated dependency-upgrade refactors, then asks the same session to review its own diff before opening the PR. Human spot-checks find the self-review approves changes containing real regressions in about 1 in 5 PRs, even though the review prompt says 'scrutinize this diff as if a different engineer wrote it.' What change would most effectively catch these regressions?",
+      "options": [
+        "Run the review as a separate CI step in a fresh Claude Code session that receives only the diff and repo context, with no access to the generator session.",
+        "Enable extended thinking for the self-review step so the model reasons more deeply before approving its own changes.",
+        "Strengthen the review prompt to instruct the model to adopt an adversarial reviewer persona and list at least three potential problems before approving.",
+        "Run the self-review three times in the same session and only approve the PR when all three runs agree the diff is safe."
+      ],
+      "correct": 0,
+      "explanation": "The root cause is session context: an instance that generated the code retains the reasoning that produced its decisions, making it systematically unlikely to question them. Independent review instances without the generator's reasoning context catch issues that self-review instructions and extended thinking do not \u2014 and in CI, a fresh session per step is free. Option B applies more compute to a biased context; deeper reasoning from the same premises reproduces the same blind spots. Option C is prompt-only role-play that the stem shows is already being tried and failing \u2014 the persona instruction doesn't remove the generation context. Option D repeats the same biased evaluation three times; correlated errors agree with each other, so consensus among self-reviews launders the bias rather than catching it."
+    },
+    {
+      "id": "s5-q6",
+      "domain": 4,
+      "difficulty": "core",
+      "rule": "Precision comes from explicit categorical report/skip criteria, not from vague caution instructions or confidence filtering.",
+      "stem": "Your PR review bot's prompt says 'check that error handling is robust and flag anything concerning.' Developers report that 45% of its error-handling findings are false positives \u2014 mostly flagging intentional fire-and-forget patterns that match the surrounding codebase. What prompt change would most effectively reduce the false positive rate?",
+      "options": [
+        "Add 'be conservative and only flag issues you are highly confident about' to the review instructions.",
+        "Have the model attach a confidence score to each finding and configure the posting script to suppress findings below 0.8.",
+        "Replace the vague instruction with explicit criteria defining which error-handling issues to report (e.g., swallowed exceptions on payment or data-write paths) and which to skip (e.g., patterns consistent with the surrounding codebase).",
+        "Add a second Claude pass that re-evaluates each finding from the first pass and filters out those it judges to be false positives."
+      ],
+      "correct": 2,
+      "explanation": "The false positives stem from a vague criterion ('robust', 'anything concerning') that gives the model no decision boundary, so it flags patterns the team considers acceptable. Explicit categorical report/skip criteria \u2014 including skipping patterns consistent with the local codebase \u2014 directly define that boundary. Option A is the named trap: general instructions like 'be conservative' fail to improve precision because they don't tell the model what conservative means for this codebase. Option B relies on self-reported confidence, an unreliable proxy \u2014 the model is confidently wrong about exactly these patterns. Option D adds cost and latency to filter outputs downstream while the generator keeps producing noise from the same vague criterion, and the filter inherits the same undefined standard for what counts as a real issue."
+    },
+    {
+      "id": "s5-q7",
+      "domain": 4,
+      "difficulty": "core",
+      "rule": "When detailed instructions still produce inconsistently formatted output, 2-4 few-shot examples demonstrating the exact desired format are the most effective fix.",
+      "stem": "Your review prompt contains a detailed specification of the required finding format: file location, issue description, severity, and a suggested fix. Despite this, about 30% of findings arrive malformed \u2014 severity written as a sentence, suggested fixes merged into the issue description, or the location omitted. What change would most effectively achieve consistent output?",
+      "options": [
+        "Expand the format specification with a numbered list of formatting rules and a warning that malformed findings will be discarded.",
+        "Add 2-4 few-shot examples of complete, correctly formatted findings, including one demonstrating how to format an ambiguous case.",
+        "Lower the sampling temperature for the review invocation so the model adheres more deterministically to the written specification.",
+        "Split the review into two calls: one that identifies issues in free text, and a second that reformats that text into the required structure."
+      ],
+      "correct": 1,
+      "explanation": "Few-shot examples are the most effective technique for achieving consistently formatted, actionable output precisely when detailed instructions alone produce inconsistent results \u2014 the situation described. Concrete examples demonstrate the format unambiguously and generalize to novel findings, including ambiguous cases. Option A adds more of the thing that is already failing: prose specifications are interpreted inconsistently no matter how numbered or threatening. Option C misdiagnoses formatting drift as a sampling problem; temperature doesn't teach the model what the format is. Option D over-engineers a two-call pipeline with doubled cost and latency to work around a problem a few examples solve in one call, and the reformatting call would itself need format examples to be reliable."
+    },
+    {
+      "id": "s5-q8",
+      "domain": 4,
+      "difficulty": "stretch",
+      "rule": "When one category generates most false positives, temporarily disable it while improving its prompt \u2014 high-FP categories destroy trust in the accurate categories too.",
+      "stem": "Analysis of dismissed findings shows your review bot's 'documentation accuracy' category accounts for 70% of all false positives, while its security and bug categories run above 90% precision. Developers have begun bulk-dismissing every bot comment, including valid critical security findings. What's the most effective immediate response?",
+      "options": [
+        "Add 'only report documentation issues when you are highly confident' to the documentation category's criteria.",
+        "Apply a global confidence threshold across all categories so only the strongest findings in any category get posted.",
+        "Reclassify all documentation-accuracy findings as minor severity so developers can filter them out of their review workflow.",
+        "Temporarily disable the documentation-accuracy category while you rewrite its criteria, keeping security and bug reporting active."
+      ],
+      "correct": 3,
+      "explanation": "The urgent problem is trust contagion: one high-false-positive category is causing developers to dismiss the accurate categories' findings too, including critical security issues. The documented remedy is to temporarily disable the offending category while its prompt is improved \u2014 this immediately stops the noise, protects trust in the >90%-precision categories, and loses only a category that was mostly wrong anyway. Option A is the 'high-confidence' caution instruction that fails to improve precision. Option B punishes the healthy categories: a global threshold suppresses valid security findings to treat a problem caused by one category. Option C solves a different problem \u2014 the findings are still posted and still mostly wrong; labeling noise 'minor' doesn't restore trust, it teaches developers the bot mislabels on top of misfiring."
+    },
+    {
+      "id": "s5-q9",
+      "domain": 4,
+      "difficulty": "stretch",
+      "rule": "Strict schemas eliminate JSON syntax errors, not semantic errors \u2014 semantic failures need validation plus retry-with-error-feedback.",
+      "stem": "Since adding --json-schema, your review findings parse successfully in 100% of runs. But developers report that about 15% of inline comments land on the wrong line, and some findings carry severities that contradict your documented anchors. Your team is confused because 'the schema should have prevented this.' What should you do?",
+      "options": [
+        "Add programmatic validation after each run (e.g., verify each file/line exists in the diff, check severity against the anchor rules) and on failure retry with the specific validation errors appended to the prompt.",
+        "Tighten the JSON schema by adding stricter type constraints, minimum/maximum bounds on the line field, and pattern validation on file paths.",
+        "Force the findings tool with tool_choice so the model must emit findings through the schema-bound tool on every invocation.",
+        "Drop the schema and have the model write findings as free-form prose, since the structured format is constraining its reasoning about locations."
+      ],
+      "correct": 0,
+      "explanation": "This is the schema boundary: strict schemas guarantee the output parses (syntax) but cannot guarantee the values are right (semantics) \u2014 a line number can be a perfectly valid integer and still point at the wrong line. Semantic errors require external validation plus the retry-with-error-feedback pattern: re-prompt with the specific validation failures so the model can self-correct. Option B stays inside the schema, which can only check form: a line-number bound can't know which line the issue is actually on. Option C solves a different problem \u2014 tool_choice guarantees the tool gets called, but the tool is already being called; the values inside it are what's wrong. Option D is a regression to the pre-schema world, reintroducing the parse failures the schema eliminated while doing nothing for location accuracy."
+    },
+    {
+      "id": "s5-q10",
+      "domain": 4,
+      "difficulty": "core",
+      "rule": "Batch failures are handled per custom_id: resubmit only the failed requests, modified to fix the failure cause \u2014 never rerun the whole batch.",
+      "stem": "Your nightly test-generation batch submits 400 source modules through the Message Batches API. This morning's results show 352 succeeded, while 48 failed because several large modules exceeded the context limit. What's the correct way to handle the failures?",
+      "options": [
+        "Resubmit the full 400-request batch with the oversized modules removed, then process those modules manually.",
+        "Move the 48 failed modules to synchronous API calls against a higher-tier model with a larger context window.",
+        "Identify the 48 failed requests by their custom_id values, chunk the oversized modules, and resubmit only those requests in a new batch.",
+        "Configure the nightly job to automatically resubmit the entire batch each night until every request in it succeeds."
+      ],
+      "correct": 2,
+      "explanation": "custom_id exists precisely for correlating batch requests with results, so failures can be isolated and resubmitted individually \u2014 with modifications that address why they failed, here chunking the modules that blew the context limit. Option A re-pays for 352 requests that already succeeded and abandons the failed modules to manual work instead of fixing them. Option B is over-engineered escalation: it forfeits the 50% batch savings and adds a second code path for a latency-tolerant overnight job, when chunking within the existing batch lane solves the actual failure cause. Option D blindly re-pays for the entire batch every night, and the oversized modules will fail identically forever because nothing about the requests changed."
+    },
+    {
+      "id": "s6-q1",
+      "domain": 4,
+      "difficulty": "core",
+      "rule": "Fields the source document may not contain must be optional/nullable \u2014 a required field the document lacks pressures the model to fabricate a value.",
+      "stem": "Your invoice extraction pipeline uses tool use with a strict JSON schema in which every field is required. QA sampling finds that for the 9% of invoices that print no purchase-order number, extractions contain plausible-looking PO numbers that appear nowhere in the source document. Schema validation passes on every one of these. What change would most effectively eliminate the fabricated values?",
+      "options": [
+        "Add a system-prompt instruction: \"Never guess or infer values; only extract information explicitly present in the document\"",
+        "Add a verification pass in which a second independent Claude instance checks each extracted PO number against the document text before acceptance",
+        "Make po_number nullable in the schema and state in the tool description that the model must return null when the field is absent from the document",
+        "Enable strict mode on the JSON schema so the model can only emit values grounded in the input document"
+      ],
+      "correct": 2,
+      "explanation": "A required schema field the document lacks forces the model to invent a value to satisfy the schema \u2014 the fabrication is structural, not behavioral. Making the field nullable with a return-null instruction in the tool description removes that pressure at the root, which is the guide's stated fix for exactly this failure. The system-prompt instruction is probabilistic compliance layered on a schema that still demands a value, so the structural pressure remains. The second-instance verification pass detects fabrications downstream at double the cost and latency instead of preventing them \u2014 and the extraction still needs a way to represent absence, which is the nullable field. Strict mode is a misattributed capability: strict schemas eliminate JSON syntax errors, but no schema mode grounds values in the source text."
+    },
+    {
+      "id": "s6-q2",
+      "domain": 4,
+      "difficulty": "core",
+      "rule": "Guaranteed schema-compliant structured output = tool use with the JSON schema as input_schema, never JSON-by-prompting plus cleanup.",
+      "stem": "Your extraction service prompts Claude to \"respond with a JSON object matching this schema\" and parses the text response. In production, 6% of responses fail json.loads \u2014 markdown code fences, explanatory preambles before the object, and trailing commas \u2014 crashing the downstream ingestion job. What change would most effectively eliminate these failures?",
+      "options": [
+        "Add a post-processing repair layer that strips code fences, removes preamble text, and fixes trailing commas before parsing",
+        "Define an extraction tool whose input_schema is the output schema, force it with tool_choice, and read the structured data from the tool_use block's input",
+        "Strengthen the prompt to \"Respond ONLY with valid JSON \u2014 no markdown, no commentary\" and retry any response that fails to parse",
+        "Set output_format: \"json\" on the Messages API request to enforce JSON-only responses"
+      ],
+      "correct": 1,
+      "explanation": "Tool use with the JSON schema as the tool's input_schema eliminates syntax failures by construction \u2014 the model's tool arguments must conform to the schema, so fences, preambles, and trailing commas cannot occur. This is the guide's stated most-reliable approach and the root-cause fix. The repair layer patches symptoms, chasing an open-ended set of malformations it will keep missing. The strengthened prompt plus retry is probabilistic compliance with paid retries for a failure class tool use removes entirely. The output_format parameter is a nonexistent Messages API feature \u2014 structured output on the API is achieved through tool use, not an output-format flag."
+    },
+    {
+      "id": "s6-q3",
+      "domain": 4,
+      "difficulty": "core",
+      "rule": "Multiple extraction schemas with unknown document type \u2192 tool_choice \"any\": guarantees a tool call while letting the model pick the matching schema.",
+      "stem": "Your pipeline registers three extraction tools \u2014 record_invoice, record_contract, record_receipt \u2014 because document type is unknown at submission time. tool_choice is currently {\"type\": \"auto\"}. In 4% of runs the model returns prose (\"This appears to be a receipt from...\") instead of calling any tool, and the parser crashes. What change most effectively guarantees structured output?",
+      "options": [
+        "Set tool_choice to {\"type\": \"tool\", \"name\": \"record_invoice\"} since invoices are the most common document type",
+        "Add a system-prompt instruction: \"You must always call exactly one extraction tool; never respond with plain text\"",
+        "Add a classification pre-pass that calls the model once to detect the document type, then makes a second call forcing the corresponding tool",
+        "Set tool_choice to {\"type\": \"any\"} so the model must call a tool but can select the schema matching the document type"
+      ],
+      "correct": 3,
+      "explanation": "tool_choice \"any\" deterministically guarantees a tool call while preserving the model's ability to choose the schema that matches the document \u2014 the guide's prescribed setting for exactly this case: multiple extraction schemas with unknown document type. Forcing record_invoice pushes every contract and receipt through the wrong schema, corrupting the data to fix the format. The system-prompt mandate is probabilistic \u2014 under \"auto\" the model may still return text, so the 4% failure mode persists at some rate. The classification pre-pass doubles calls and latency to rebuild, outside the API, routing that \"any\" already provides deterministically in a single call."
+    },
+    {
+      "id": "s6-q4",
+      "domain": 4,
+      "difficulty": "core",
+      "rule": "Strict JSON schemas eliminate syntax errors only; semantic errors require code-level cross-field validation plus retry-with-error-feedback.",
+      "stem": "Every extraction in your pipeline passes strict JSON schema validation, yet finance reports that in 3% of invoices the line-item amounts do not sum to the extracted total, and in some documents the ship-to address lands in the bill-to field. What change would most effectively address these errors?",
+      "options": [
+        "Add code-level semantic validation (cross-field checks such as line-item sums), and on failure send a follow-up request containing the document, the failed extraction, and the specific validation error",
+        "Tighten the JSON schema with stricter types, patterns, and additionalProperties: false so invalid combinations cannot validate",
+        "Upgrade the extraction calls to a higher-tier model with stronger reasoning to reduce extraction mistakes",
+        "Run each extraction three times and accept the majority value for each field, discarding outlier extractions"
+      ],
+      "correct": 0,
+      "explanation": "Line items that fail to sum and swapped same-typed fields are semantic errors \u2014 schema-valid values that are wrong in relation to each other, which the guide is explicit that strict schemas cannot prevent. The fix is a code-level semantic validation layer (e.g., Pydantic cross-field checks) plus retry-with-error-feedback carrying the document, the failed extraction, and the specific error so the model can self-correct. Schema tightening misunderstands the boundary: no JSON schema construct expresses cross-field arithmetic or detects a value placed in the wrong same-typed field. A higher-tier model is disproportionate spend that at best reduces, never guarantees against, errors a deterministic check catches for free. Triple extraction with majority voting triples cost and can converge on a consistent misreading, still shipping unvalidated arithmetic."
+    },
+    {
+      "id": "s6-q5",
+      "domain": 4,
+      "difficulty": "stretch",
+      "rule": "Retries fix format and structural errors; they can never fix information that is absent from the source document \u2014 classify failures before retrying.",
+      "stem": "Your validation-retry loop allows 3 retries with error feedback per document. A cost review shows 30% of retry spend goes to receipts failing validation on po_number, which your Pydantic model requires \u2014 but receipts do not carry PO numbers, so all three retries fail and the documents route to human review anyway. What change most effectively reduces this waste?",
+      "options": [
+        "Rewrite the retry feedback message to more strongly direct the model to locate the PO number anywhere in the document",
+        "Classify validation failures before retrying: make po_number nullable so absent-from-document cases return null with zero retries and route by confidence, while format and structural errors still retry with error feedback",
+        "Raise max_retries from 3 to 5 to give the model more attempts on difficult documents",
+        "Remove po_number from the schema and validation model entirely so it can never trigger a retry"
+      ],
+      "correct": 1,
+      "explanation": "Retries are only effective against format and structural errors; no number of retries can produce information the document does not contain. Classifying failure types \u2014 making the field nullable so genuinely absent information short-circuits to null with zero retries \u2014 is the guide's stated judgment call and eliminates the wasted spend at its root while keeping retries where they work. Strengthening the feedback message intensifies an attempt that is structurally guaranteed to fail: the PO number is not there to find. Raising max_retries to 5 makes the waste 66% worse per affected document. Removing the field entirely solves a different problem by destroying real data \u2014 invoices and contracts in the same pipeline do carry PO numbers, and dropping the field loses them everywhere to silence one document type's failure."
+    },
+    {
+      "id": "s6-q6",
+      "domain": 4,
+      "difficulty": "stretch",
+      "rule": "Batch failures \u2192 resubmit only the failed custom_ids with modifications; batch requests cannot run multi-turn retry conversations in-flight.",
+      "stem": "Your nightly Message Batches API run processes 6,000 documents. This morning, 45 requests failed with context-length errors on unusually long contracts, and 120 succeeded but failed your semantic validation. A teammate proposes rerunning the entire 6,000-document batch with the validation-retry conversation embedded in each request so failures self-correct in-flight. What is the correct approach?",
+      "options": [
+        "Embed the validation-retry loop inside each batch request so the model corrects failed extractions before the batch completes",
+        "Rerun the full 6,000-document batch with a higher max_tokens setting so the long contracts no longer exceed limits",
+        "Resubmit only the failed items by custom_id: chunk the 45 oversized contracts, and send the 120 validation failures as new requests that include the original document, the failed extraction, and the specific errors",
+        "Migrate the entire nightly pipeline to the synchronous API so retries and long documents can be handled in real time"
+      ],
+      "correct": 2,
+      "explanation": "custom_id exists precisely to correlate results and enable selective resubmission with modifications \u2014 chunking is the standard fix for context-limit failures, and retry feedback goes into new requests because the original conversation cannot continue inside a batch. Embedding the retry loop in batch requests is impossible: the Batch API does not support multi-turn tool calling within a single request, so no mid-request retry round-trip can execute. Raising max_tokens misdiagnoses the failure \u2014 context-length errors come from oversized input, which max_tokens does not address \u2014 and rerunning everything wastefully reprocesses 5,835 already-successful documents. Migrating to the synchronous API abandons the 50% batch savings on the entire latency-tolerant nightly volume to fix a problem affecting under 3% of items."
+    },
+    {
+      "id": "s6-q7",
+      "domain": 5,
+      "difficulty": "core",
+      "rule": "Aggregate accuracy masks segment-level failure \u2014 analyze accuracy by document type AND by field before reducing human review.",
+      "stem": "Your extraction dashboard shows 96.5% overall field accuracy across 40,000 documents per month, comfortably above the 95% target. Leadership wants to cut the human review queue by 80% to reduce costs. What is the most effective first step before reducing review coverage?",
+      "options": [
+        "Raise the confidence threshold for auto-approval so that only the very highest-confidence extractions bypass human review",
+        "Proceed with the reduction \u2014 96.5% exceeds the target, and downstream systems will surface any residual errors for correction",
+        "Deploy a separately trained error-detection classifier over historical extractions to predict which documents need review",
+        "Analyze accuracy segmented by document type and by field to verify performance is consistent across every segment before automating any of them"
+      ],
+      "correct": 3,
+      "explanation": "A 96.5% aggregate can hide a document type or field running far below target \u2014 the guide's core warning before automating high-confidence extractions. Segmenting accuracy by document type and by field is the low-effort, high-leverage verification that must precede any reduction in review. Raising the auto-approval confidence threshold trusts a signal that may be miscalibrated precisely in the failing segments (confidently wrong) and never reveals where errors concentrate. Proceeding on the aggregate shifts detection to downstream systems, where plausible-but-wrong values fail silently for weeks. A separately trained error-detection classifier is over-engineered infrastructure built before running the simple segmentation analysis that actually answers the question."
+    },
+    {
+      "id": "s6-q8",
+      "domain": 5,
+      "difficulty": "core",
+      "rule": "Lost-in-the-middle: models reliably process the beginning and end of long inputs and drop middles \u2014 fix with chunking, summary-first placement, and section headers, not more context capacity.",
+      "stem": "Your system extracts obligation clauses from 70-page service agreements submitted as a single input. In roughly 20% of documents, clauses from pages 30\u201350 come back null even though reviewers confirm they are present, while clauses near the beginning and end extract reliably. The documents fit within the context window. What change most effectively addresses this?",
+      "options": [
+        "Chunk each agreement into sections for separate extraction passes, and where aggregated input is required, place a key-information summary at the beginning and organize content with explicit section headers",
+        "Switch to a model with a larger context window so the full agreement fits with substantial headroom",
+        "Add a system-prompt instruction to \"read the entire document carefully, including all middle sections, before extracting any clauses\"",
+        "Increase max_tokens on the request so the model has enough output budget to extract every clause it finds"
+      ],
+      "correct": 0,
+      "explanation": "Reliable extraction at the start and end with nulls from the middle is the lost-in-the-middle effect \u2014 a position-based attention limitation, not a capacity problem. Chunking into per-section extraction passes, plus summary-first placement and explicit section headers where aggregated input is required, restructures the input around that limitation exactly as the guide prescribes. A larger context window misses the point: the documents already fit, and window capacity does not fix attention position effects. The read-carefully instruction is prompt-only guidance against a probabilistic attention behavior, with no structural change. Raising max_tokens governs output length \u2014 nothing indicates truncated output; the model is failing to attend to middle input, not running out of room to respond."
+    },
+    {
+      "id": "s6-q9",
+      "domain": 5,
+      "difficulty": "stretch",
+      "rule": "Never route on raw self-reported confidence \u2014 calibrate per-field review thresholds against a labeled validation set.",
+      "stem": "Your extraction tool outputs field-level confidence scores, and you route anything below 0.8 to human review. An audit finds the auto-approved lane carries a 7% error rate on invoice_date fields scored above 0.9, while the human queue is flooded with vendor_name extractions scored around 0.7 that reviewers confirm correct 98% of the time. What change most effectively fixes this routing?",
+      "options": [
+        "Add a system-prompt instruction telling the model to assign confidence scores more conservatively, especially for date fields",
+        "Lower the global review threshold from 0.8 to 0.6 to relieve the flooded human queue",
+        "Build a labeled validation set, measure actual accuracy at each confidence level per field, and calibrate separate per-field review thresholds from that data",
+        "Train a dedicated confidence-estimation model on historical extraction outcomes to replace the extractor's self-reported scores"
+      ],
+      "correct": 2,
+      "explanation": "The miscalibration runs in opposite directions per field \u2014 overconfident on invoice_date, underconfident on vendor_name \u2014 so no single raw cutoff can work. The guide's pattern is to measure actual accuracy at each confidence level against a labeled validation set and calibrate separate per-field thresholds, so routing reflects measured accuracy rather than the model's self-assessment. Prompting the model to score more conservatively is prompt-only tuning of a self-reported signal the guide identifies as unreliable \u2014 the same failure class as trusting self-reported confidence for escalation. Lowering the global threshold to 0.6 is a symptom patch that shrinks the queue while auto-approving even more confidently wrong invoice_date extractions. A dedicated trained confidence model is over-engineered ML infrastructure when threshold calibration on labeled data has not been tried."
+    },
+    {
+      "id": "s6-q10",
+      "domain": 5,
+      "difficulty": "core",
+      "rule": "Never stop auditing the automated lane \u2014 stratified random sampling of high-confidence extractions measures ongoing error rate and catches novel error patterns.",
+      "stem": "Six months after you automated high-confidence extractions, a major vendor changed its invoice layout. For six weeks, unit prices were extracted into the quantity field \u2014 every affected extraction passed validation with high confidence \u2014 until an accounting reconciliation finally surfaced the damage. What ongoing process would have caught this weeks earlier?",
+      "options": [
+        "Running each document through two independent extraction calls and auto-approving only when the two results agree",
+        "Stratified random sampling of high-confidence auto-approved extractions, with human review of the sample to measure ongoing error rates and detect novel error patterns",
+        "Raising the confidence threshold for auto-approval so fewer extractions bypass human review",
+        "Restoring full human review of all extractions until the pipeline demonstrates twelve consecutive error-free months"
+      ],
+      "correct": 1,
+      "explanation": "The layout change produced extractions that were high-confidence, validation-passing, and systematically wrong \u2014 a novel error pattern in the automated lane. Stratified random sampling of high-confidence auto-approved output is the guide's mechanism for exactly this: it continuously measures the automated lane's error rate and surfaces new failure modes within the sampling cadence rather than after downstream damage. Dual independent extraction fails because both calls face the same new layout and make the same misreading \u2014 agreement does not imply correctness \u2014 while doubling cost. A higher confidence threshold does not help when the model is confidently wrong; the bad extractions still clear any cutoff. Restoring full human review for twelve months is wildly disproportionate, abandoning the automation's entire value to compensate for a missing sampling process."
+    }
+  ]
+}
