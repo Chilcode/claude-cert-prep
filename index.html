@@ -213,6 +213,28 @@
   .focus-card h3 { margin: 0 0 4px; font-family: var(--sans); font-size: 14px; }
   .focus-card p { margin: 0 0 7px; font-size: 13px; color: var(--ink-soft); }
 
+  /* learning path (7-phase framing) */
+  .path-step { padding: 18px 20px; margin-top: 14px; }
+  .path-step:first-of-type { margin-top: 18px; }
+  .path-head { display: flex; gap: 14px; align-items: flex-start; }
+  .path-num { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-bg); color: var(--accent-ink); display: grid; place-items: center; font-family: var(--serif); font-weight: 700; font-size: 15px; }
+  .path-head h2 { margin: 0; font-family: var(--serif); font-size: 18px; }
+  .path-head p { margin: 3px 0 0; font-size: 13.5px; color: var(--ink-soft); }
+  .path-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .path-domlist { display: flex; flex-direction: column; gap: 6px; }
+  .path-dom { display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 13.5px; }
+  .path-dom:hover { border-color: var(--accent); }
+  .path-dom .m { font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .map-node { border-left: 2px solid var(--line); margin: 2px 0 2px 4px; padding-left: 12px; }
+  .map-node summary { cursor: pointer; padding: 5px 0; font-size: 13.5px; }
+  .map-children { margin: 2px 0 6px; }
+  .map-leaf { display: block; padding: 4px 0 4px 6px; font-size: 13px; }
+  .path-chip { display: inline-block; padding: 3px 10px; margin: 3px 6px 0 0; border-radius: 999px; background: var(--surface2); font-size: 12px; color: var(--ink-soft); }
+  .path-goal-set { font-size: 13.5px; line-height: 1.6; }
+  .path-refl-q { margin: 12px 0 4px; font-size: 13px; font-weight: 600; }
+  .path-locks { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 8px 0; }
+  .path-locks label { font-size: 13px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 5px; }
+
   /* font size + dyslexia spacing (font family set via --serif/--sans from JS) */
   :root { --fscale: 1; }
   article.doc { font-size: calc(16.5px * var(--fscale)); }
@@ -260,6 +282,7 @@
       <button id="tabStudy">Study</button>
       <button id="tabPractice">Practice</button>
       <button id="tabProgress">Progress</button>
+      <button id="tabPath">Learning Path</button>
     </nav>
     <button class="ghost small" id="homeBtn" hidden>End session</button>
   </div>
@@ -383,8 +406,94 @@ function cardStatus(qid) {
   if (!sr.reps || sr.last === 'again') return 'learning';
   return (sr.iv || 0) >= 21 ? 'mature' : 'young';
 }
-function isDue(qid) { const c = cardOf(qid); if (!c || !c.sr || (c.r + c.w) === 0) return true; return (c.sr.due || 0) <= Date.now(); }
+function isDue(qid) {
+  const c = cardOf(qid);
+  if (c && c.sr) return (c.sr.due || 0) <= Date.now();   // started cards: unchanged, normal SM-2
+  const prefs = loadingPrefs();
+  const cap = newCardCapToday(prefs, BANK.questions.length);
+  const admitted = admissionOrder().slice(0, cap).map(q => q.id);
+  return admitted.includes(qid);
+}
 function dueList() { return BANK.questions.filter(q => isDue(q.id)); }
+
+/* ---------- Phase 5: loading-strategy new-card intake (Make it Stick) ---------- */
+const LK = 'ccaf-loading-v1';
+function loadingPrefs() {
+  let p; try { p = JSON.parse(localStorage.getItem(LK)) || {}; } catch { p = {}; }
+  return { level: p.level || 'intermediate', examDate: p.examDate || null, studyStart: p.studyStart || null };
+}
+function saveLoadingPrefs(p) { try { localStorage.setItem(LK, JSON.stringify(p)); } catch {} }
+
+const LOADING_CURVES = {
+  beginner:     [1.0, 1.25, 1.6, 2.0, 3.0, 3.0, 2.5, 2.0],
+  intermediate: [2.04375, 2.04375, 2.04375, 2.04375, 2.04375, 2.04375, 2.04375, 2.04375],
+  advanced:     [2.0, 2.5, 3.0, 3.0, 2.0, 1.6, 1.25, 1.0],
+};
+const X_FACTOR = 16.35; // sum of any curve above — normalizing constant
+
+function newCardCapToday(prefs, totalNew) {
+  if (!prefs.examDate || !prefs.studyStart) return Infinity; // no plan set = today's unconstrained behavior
+  const curve = LOADING_CURVES[prefs.level] || LOADING_CURVES.intermediate;
+  const totalDays = Math.max(1, (Date.parse(prefs.examDate) - Date.parse(prefs.studyStart)) / DAY);
+  const sliceLen = totalDays / 10;                 // 10 equal slices; last 2 are pure review (no new cards)
+  const daysIn = (Date.now() - Date.parse(prefs.studyStart)) / DAY;
+  const checkpoint = Math.min(8, Math.max(1, Math.ceil(daysIn / sliceLen)));
+  let cumulative = 0;
+  for (let i = 0; i < checkpoint; i++) cumulative += curve[i];
+  const cap = Math.round(totalNew * cumulative / X_FACTOR);
+  return checkpoint === 8 ? totalNew : cap;          // guarantee full bank scheduled by checkpoint 8
+}
+
+// Current accuracy for a domain (0 if never attempted) — a display/diagnostic figure,
+// separate from the admission-order ranking below (per SUPERLEARN-SPEC.md §5.2 correction).
+function domainMastery(dom) {
+  const Q = (loadStats().q) || {};
+  let r = 0, w = 0;
+  for (const q of BANK.questions) { if (q.domain != dom) continue; const c = Q[q.id]; if (c) { r += c.r || 0; w += c.w || 0; } }
+  return (r + w) ? Math.round(100 * r / (r + w)) : 0;
+}
+// Domain Importance/Challenge ranking for Phase 5 admission order (spec §5.2, as corrected):
+// weight only. The spreadsheet's Priority Score's (1+%Mastered) term is a no-op here — every
+// admission candidate is by definition never-started (0% mastered) — so it's dropped, not inverted.
+// The app has no per-question "challenge" rating, so Importance/Challenge reduces to weight alone.
+function domainPriority(dom) { return parseFloat(DOMAINS[dom].w) || 0; }
+function admissionOrder() {
+  const pri = {}; for (const d in DOMAINS) pri[d] = domainPriority(d);
+  return BANK.questions.filter(q => cardStatus(q.id) === 'new').sort((a, b) => pri[b.domain] - pri[a.domain]);
+}
+
+/* ---------- Phase 2: Lock it In (goal + commitment) ---------- */
+const GK = 'ccaf-goal-v1';
+function goalPrefs() { try { return JSON.parse(localStorage.getItem(GK)) || null; } catch { return null; } }
+function saveGoal(g) { try { localStorage.setItem(GK, JSON.stringify(g)); } catch {} }
+const LOCK_MECHANISMS = [
+  'Focusmate / body-double session',
+  'Accountability partner check-in',
+  'Habit tracker streak',
+  'Public commitment (post it somewhere visible)',
+  'Self-bet (money on the line)',
+  'Anti-incentive (a real cost if you skip)',
+  'Fail-safe (a fallback plan for a missed day)',
+];
+function goalMessage(g) {
+  const locks = (g.locks || []).join(', ') || 'none picked yet';
+  return `I'm committing to ${g.what}. I'll study ${g.minutes} min/day, ${g.days} days/week, for ${g.weeks} weeks. My reward when I hit it: ${g.reward}. Biggest obstacle: ${g.obstacle}. Locking mechanisms: ${locks}.`;
+}
+
+/* ---------- Phase 7: Make it Yours (reflection) ---------- */
+const RK = 'ccaf-reflection-v1';
+function reflectionPrefs() { try { return JSON.parse(localStorage.getItem(RK)) || {}; } catch { return {}; } }
+function saveReflection(r) { try { localStorage.setItem(RK, JSON.stringify(r)); } catch {} }
+const REFLECTION_QS = [
+  'Did you hit the goal you set in Phase 2? Why or why not?',
+  'What would you change about how you studied?',
+  'Which habit or ritual mattered most?',
+  'Where did you lean on memorization instead of understanding — and why?',
+  'What is the one principle you are most likely to forget?',
+  'Who would benefit from what you now know?',
+  'How would you explain the hardest domain to a total beginner?',
+  'What is your plan to keep this knowledge fresh after the exam?',
+];
 
 /* ---------- study-guide cross-reference links ---------- */
 function studyLinksHTML(q) {
@@ -926,10 +1035,12 @@ function setTab(t) {
   $('#tabStudy').classList.toggle('active', t === 'study');
   $('#tabPractice').classList.toggle('active', t === 'practice');
   $('#tabProgress').classList.toggle('active', t === 'progress');
+  $('#tabPath').classList.toggle('active', t === 'path');
 }
 $('#tabStudy').addEventListener('click', () => { if (guardSession()) showStudy(); });
 $('#tabPractice').addEventListener('click', () => { if (guardSession()) home(); });
 $('#tabProgress').addEventListener('click', () => { if (guardSession()) showProgress(); });
+$('#tabPath').addEventListener('click', () => { if (guardSession()) showPath(); });
 homeBtn.addEventListener('click', () => { if (guardSession()) home(); });
 
 /* ---------- study ---------- */
@@ -1489,6 +1600,203 @@ function showProgress() {
   const dm = $('#drillMiss'); if (dm) dm.addEventListener('click', () => begin({ mode: 'drill', queue: shuffle(misses.slice()) }));
   $('#toPractice').addEventListener('click', home);
   $('#toStudy').addEventListener('click', showStudy);
+  window.scrollTo(0, 0);
+}
+
+/* ---------- Learning Path (7-phase framing) ---------- */
+function pathCard(n, title, desc, bodyHtml, bodyId) {
+  return `<div class="card path-step">
+    <div class="path-head"><span class="path-num">${n}</span><div><h2>${esc(title)}</h2><p>${esc(desc)}</p></div></div>
+    <div class="path-body" id="${bodyId}">${bodyHtml}</div>
+  </div>`;
+}
+
+/* Phase 1 — Break it Down: weakest-domain-first pre-read list (reuses Progress's existing
+   weakest-first diagnostic ordering — mastery ascending, not the Phase-5 admission weighting). */
+function renderP1Body() {
+  const doms = Object.keys(DOMAINS).sort((a, b) => domainMastery(a) - domainMastery(b));
+  return `<div class="path-domlist">
+    ${doms.map(d => `<button class="path-dom" data-doc="${DOMAIN_DOC[d]}">
+      <span class="t">D${d} · ${DOMAINS[d].name}</span>
+      <span class="m">${DOMAINS[d].w} of exam · ${domainMastery(d)}% mastery</span>
+    </button>`).join('')}
+  </div>`;
+}
+function wireP1() {
+  document.querySelectorAll('#pathP1Body .path-dom').forEach(b => b.addEventListener('click', () => showDoc(b.dataset.doc)));
+}
+
+/* Phase 2 — Lock it In: goal + commitment ritual */
+function renderP2Body() {
+  const g = goalPrefs();
+  if (g && !pathEditingGoal) {
+    return `<p class="path-goal-set"><b>Goal:</b> ${esc(g.what)} — ${esc(g.minutes)} min/day, ${esc(g.days)} days/week, ${esc(g.weeks)} weeks<br>
+      <b>Reward:</b> ${esc(g.reward)} &nbsp;·&nbsp; <b>Obstacle:</b> ${esc(g.obstacle)}</p>
+      <div>${(g.locks || []).map(l => `<span class="path-chip">${esc(l)}</span>`).join('') || '<span class="path-chip">No locking mechanisms picked yet</span>'}</div>
+      <div class="row">
+        <button class="ghost small" id="goalCopy">Copy commitment message</button>
+        <button class="ghost small" id="goalEdit">Edit goal</button>
+      </div>`;
+  }
+  const w = g || {};
+  return `<div class="row" style="margin-top:0">
+      <label>Goal <input id="goalWhat" placeholder="e.g. pass the CCAF exam" value="${esc(w.what || '')}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:220px"></label>
+      <label>Min/day <input id="goalMinutes" type="number" min="1" value="${esc(String(w.minutes || 30))}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:70px"></label>
+      <label>Days/wk <input id="goalDays" type="number" min="1" max="7" value="${esc(String(w.days || 5))}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:60px"></label>
+      <label>Weeks <input id="goalWeeks" type="number" min="1" value="${esc(String(w.weeks || 4))}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:60px"></label>
+    </div>
+    <div class="row">
+      <label>Reward <input id="goalReward" placeholder="what you get for hitting it" value="${esc(w.reward || '')}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:220px"></label>
+      <label>Obstacle <input id="goalObstacle" placeholder="what's most likely to stop you" value="${esc(w.obstacle || '')}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:220px"></label>
+    </div>
+    <div class="path-locks">
+      ${LOCK_MECHANISMS.map(l => `<label><input type="checkbox" class="goalLock" value="${esc(l)}" ${(w.locks || []).includes(l) ? 'checked' : ''}>${esc(l)}</label>`).join('')}
+    </div>
+    <div class="row"><button class="primary" id="goalSave">Save goal &amp; commitment</button></div>`;
+}
+function wireP2() {
+  const el = document.getElementById('pathP2Body');
+  const gs = el.querySelector('#goalSave');
+  if (gs) gs.addEventListener('click', () => {
+    const g = {
+      what: el.querySelector('#goalWhat').value.trim(),
+      minutes: +el.querySelector('#goalMinutes').value || 30,
+      days: +el.querySelector('#goalDays').value || 5,
+      weeks: +el.querySelector('#goalWeeks').value || 4,
+      reward: el.querySelector('#goalReward').value.trim(),
+      obstacle: el.querySelector('#goalObstacle').value.trim(),
+      locks: [...el.querySelectorAll('.goalLock:checked')].map(c => c.value),
+    };
+    saveGoal(g); pathEditingGoal = false;
+    el.innerHTML = renderP2Body(); wireP2();
+  });
+  const cp = el.querySelector('#goalCopy');
+  if (cp) cp.addEventListener('click', () => {
+    const msg = goalMessage(goalPrefs());
+    if (navigator.clipboard) navigator.clipboard.writeText(msg).then(() => alert('Commitment message copied.')).catch(() => prompt('Copy your commitment message:', msg));
+    else prompt('Copy your commitment message:', msg);
+  });
+  const ed = el.querySelector('#goalEdit');
+  if (ed) ed.addEventListener('click', () => { pathEditingGoal = true; el.innerHTML = renderP2Body(); wireP2(); });
+}
+
+/* Phase 3 — Map it Out: domain -> scenario -> principle tree, reusing the existing study-link graph */
+function buildMapTree() {
+  const tree = {};
+  for (const q of BANK.questions) {
+    const scen = q.id.split('-')[0];
+    tree[q.domain] = tree[q.domain] || {};
+    tree[q.domain][scen] = tree[q.domain][scen] || new Map();
+    const sm = STUDYMAP[q.id] || {};
+    (sm.principles || []).forEach(p => tree[q.domain][scen].set(p.id, p.title || ''));
+  }
+  return tree;
+}
+function renderP3Body() {
+  const tree = buildMapTree();
+  return Object.keys(DOMAINS).map(d => `
+    <details class="map-node">
+      <summary><a class="slink" data-doc="${DOMAIN_DOC[d]}">D${d} · ${DOMAINS[d].name}</a></summary>
+      <div class="map-children">
+        ${Object.keys(tree[d] || {}).map(s => `
+          <details class="map-node">
+            <summary><a class="slink" data-doc="${SCEN_DOC[s]}">${SCENARIOS[s]}</a></summary>
+            <div class="map-children">
+              ${[...tree[d][s].entries()].map(([pid, title]) => `<a class="slink map-leaf" data-doc="${START_DOC}" data-anchor="${pid}.">${pid} · ${esc(title)}</a>`).join('') || '<span class="map-leaf" style="color:var(--ink-soft)">No principle anchors recorded for this pair yet.</span>'}
+            </div>
+          </details>`).join('')}
+      </div>
+    </details>`).join('');
+}
+
+/* Phase 4 — Make it Simple: AGENT-4's build; this is just the framing + a stand-in link */
+function renderP4Body() {
+  return `<p class="sub" style="margin:0 0 10px">Coming soon — explain an answer out loud and the tutor grades your reasoning against the official explanation. In the meantime, hit 🎤 Ask on any answered question in Practice and talk through your reasoning with the tutor — same "why" muscle.</p>
+    <button class="ghost small" id="p4ToPractice">Go to Practice</button>`;
+}
+function wireP4() {
+  const b = document.getElementById('pathP4Body').querySelector('#p4ToPractice');
+  if (b) b.addEventListener('click', () => { if (guardSession()) home(); });
+}
+
+/* Phase 5 — Make it Stick: loading-strategy new-card intake plan */
+function renderP5Body() {
+  const lp = loadingPrefs();
+  const neverStarted = admissionOrder().length;
+  const cap = newCardCapToday(lp, BANK.questions.length);
+  const unlocked = Math.min(cap, neverStarted);
+  const planSet = !!(lp.examDate && lp.studyStart);
+  return `<div class="row" style="margin-top:0">
+      <label>Pace <select id="planLevel">
+        <option value="beginner" ${lp.level === 'beginner' ? 'selected' : ''}>Back-loaded — ease in, ramp through the middle</option>
+        <option value="intermediate" ${lp.level === 'intermediate' ? 'selected' : ''}>Level-loaded — steady pace</option>
+        <option value="advanced" ${lp.level === 'advanced' ? 'selected' : ''}>Front-loaded — hit it hard early, coast into review</option>
+      </select></label>
+      <label>Exam date <input type="date" id="planExamDate" value="${lp.examDate || ''}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px"></label>
+      <button class="ghost small" id="planSave">Save plan</button>
+    </div>
+    <p class="audio-note">${planSet
+      ? `New cards unlocked today: <b>${unlocked}</b> of ${neverStarted} not-yet-started. Cards you've already started keep reviewing on their normal schedule, unaffected.`
+      : `No exam date set — every new card is unlocked, same as today. Set a pace and an exam date to ramp new cards toward it instead.`}</p>`;
+}
+function wireP5() {
+  const el = document.getElementById('pathP5Body');
+  const b = el.querySelector('#planSave');
+  if (b) b.addEventListener('click', () => {
+    const level = el.querySelector('#planLevel').value;
+    const examDate = el.querySelector('#planExamDate').value || null;
+    const prev = loadingPrefs();
+    const studyStart = examDate ? (prev.studyStart || new Date().toISOString().slice(0, 10)) : null;
+    saveLoadingPrefs({ level, examDate, studyStart });
+    el.innerHTML = renderP5Body(); wireP5();
+  });
+}
+
+/* Phase 6 — Make it Real: the build exercises, already in the Study doc list */
+function renderP6Body() {
+  const ids = ['exercise-1-2-agent-and-claude-code', 'exercise-3-4-extraction-and-research'];
+  return `<div class="path-domlist">
+    ${ids.filter(id => DOCS.items[id]).map(id => `<button class="path-dom" data-doc="${id}"><span class="t">${esc(DOCS.items[id].title)}</span><span class="m">Build exercise</span></button>`).join('')}
+  </div>`;
+}
+function wireP6() {
+  document.querySelectorAll('#pathP6Body .path-dom').forEach(b => b.addEventListener('click', () => showDoc(b.dataset.doc)));
+}
+
+/* Phase 7 — Make it Yours: end-of-study reflection */
+function renderP7Body() {
+  const r = reflectionPrefs();
+  return `${REFLECTION_QS.map((q, i) => `<div class="path-refl-q">${esc(q)}</div><textarea class="note reflAns" data-i="${i}" rows="2" placeholder="Your answer…">${esc((r.answers && r.answers[i]) || '')}</textarea>`).join('')}
+    <div class="row"><button class="ghost small" id="reflSave">Save reflection</button>${r.savedAt ? `<span class="audio-note">Saved ${esc(r.savedAt)}</span>` : ''}</div>`;
+}
+function wireP7() {
+  const el = document.getElementById('pathP7Body');
+  const b = el.querySelector('#reflSave');
+  if (b) b.addEventListener('click', () => {
+    const answers = [...el.querySelectorAll('.reflAns')].sort((a, b) => +a.dataset.i - +b.dataset.i).map(t => t.value);
+    saveReflection({ answers, savedAt: new Date().toISOString().slice(0, 10) });
+    el.innerHTML = renderP7Body(); wireP7();
+  });
+}
+
+let pathEditingGoal = false;
+function showPath() {
+  setTab('path'); currentDoc = null; stopSpeak(); S = {}; homeBtn.hidden = true;
+  pathEditingGoal = false;
+  app.innerHTML = `
+    <div class="eyebrow">Claude Certified Architect — Foundations</div>
+    <h1>Learning Path</h1>
+    <p class="sub">The 7-phase Super-Learner method, mapped onto Study, Practice, and Progress — pre-read, lock in, connect, teach back, make it stick, apply it, make it yours.</p>
+    ${pathCard(1, 'Break it Down', 'Pre-read each domain playbook — skim titles, headings, and numbers before a real read — weakest domain first.', renderP1Body(), 'pathP1Body')}
+    ${pathCard(2, 'Lock it In', 'Commit to a goal, a cadence, a reward — and real locking mechanisms to keep you honest.', renderP2Body(), 'pathP2Body')}
+    ${pathCard(3, 'Map it Out', "Every question links to its domain, its scenario, and the principles behind it — explore it as a map, not a list.", renderP3Body(), 'pathP3Body')}
+    ${pathCard(4, 'Make it Simple', 'Teach-back: explain out loud why an answer is right, and get graded on what you missed.', renderP4Body(), 'pathP4Body')}
+    ${pathCard(5, 'Make it Stick', 'Spaced repetition with a loading strategy — how fast brand-new cards get introduced toward your exam date.', renderP5Body(), 'pathP5Body')}
+    ${pathCard(6, 'Make it Real', 'Apply the domains — the build exercises turn them into something you actually built.', renderP6Body(), 'pathP6Body')}
+    ${pathCard(7, 'Make it Yours', "A short reflection once you're passing — what you'd change, who'd benefit, what actually stuck.", renderP7Body(), 'pathP7Body')}
+  `;
+  wireP1(); wireP2(); wireP4(); wireP5(); wireP6(); wireP7();
+  wireStudyLinks(app);
   window.scrollTo(0, 0);
 }
 
