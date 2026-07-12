@@ -1,0 +1,1486 @@
+<title>CCAF Study Hub</title>
+<style>
+/*__FONTFACES__*/
+  :root {
+    --bg: #FAF7F2; --surface: #FFFFFF; --surface2: #F2EDE3; --ink: #26221B;
+    --ink-soft: #6E6659; --line: #E3DCCD; --line-strong: #C9C0AC;
+    --accent: #9A6B00; --accent-ink: #7A5500; --accent-bg: #F6E9CB;
+    --good: #2E7D4F; --good-bg: #E3F1E7; --bad: #C0392E; --bad-bg: #F9E6E2;
+    --shadow: 0 1px 2px rgba(60,50,30,.06), 0 4px 16px rgba(60,50,30,.07);
+    --serif: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: ui-monospace, 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root {
+    --bg: #15181E; --surface: #1C2027; --surface2: #242933; --ink: #EAE4D6;
+    --ink-soft: #A39A88; --line: #2D3340; --line-strong: #475062;
+    --accent: #E8B04B; --accent-ink: #F0BE63; --accent-bg: #2E2A1C;
+    --good: #4CC38A; --good-bg: #1C2E24; --bad: #E5695C; --bad-bg: #33211E;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+  }}
+  :root[data-theme="light"] {
+    --bg: #FAF7F2; --surface: #FFFFFF; --surface2: #F2EDE3; --ink: #26221B;
+    --ink-soft: #6E6659; --line: #E3DCCD; --line-strong: #C9C0AC;
+    --accent: #9A6B00; --accent-ink: #7A5500; --accent-bg: #F6E9CB;
+    --good: #2E7D4F; --good-bg: #E3F1E7; --bad: #C0392E; --bad-bg: #F9E6E2;
+    --shadow: 0 1px 2px rgba(60,50,30,.06), 0 4px 16px rgba(60,50,30,.07);
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181E; --surface: #1C2027; --surface2: #242933; --ink: #EAE4D6;
+    --ink-soft: #A39A88; --line: #2D3340; --line-strong: #475062;
+    --accent: #E8B04B; --accent-ink: #F0BE63; --accent-bg: #2E2A1C;
+    --good: #4CC38A; --good-bg: #1C2E24; --bad: #E5695C; --bad-bg: #33211E;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.5; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 16px 20px 90px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+  .eyebrow b { color: var(--accent-ink); font-weight: 700; }
+  h1 { font-family: var(--serif); font-size: 30px; line-height: 1.15; margin: 6px 0 4px; text-wrap: balance; }
+  .sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 6px; }
+  code { font-family: var(--mono); font-size: .88em; background: var(--surface2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* top bar + tabs */
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .brand { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
+  .brand b { color: var(--accent-ink); }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { border: 0; background: none; padding: 6px 14px; border-radius: 999px; font-size: 13.5px; color: var(--ink-soft); }
+  .tabs button.active { background: var(--accent-bg); color: var(--ink); font-weight: 700; }
+  .tabs button:hover:not(.active) { background: var(--surface2); }
+
+  /* home / practice */
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+  @media (max-width: 620px) { .modes { grid-template-columns: 1fr; } }
+  .mode { padding: 18px; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px; }
+  .mode:hover { border-color: var(--accent); }
+  .mode h2 { margin: 0; font-family: var(--serif); font-size: 20px; }
+  .mode p { margin: 0; color: var(--ink-soft); font-size: 13.5px; }
+  .mode .go { margin-top: 8px; align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); }
+  fieldset { border: 1px solid var(--line); border-radius: 10px; margin: 18px 0 0; padding: 14px 16px 16px; background: var(--surface); }
+  legend { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); padding: 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip span { display: inline-block; padding: 5px 12px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 13px; color: var(--ink-soft); background: var(--surface); cursor: pointer; user-select: none; }
+  .chip input:checked + span { background: var(--accent-bg); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; margin-top: 12px; }
+  .row label { font-size: 13px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 6px; }
+  select { font: inherit; font-size: 13px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 6px; padding: 4px 8px; max-width: 260px; }
+  .primary { background: var(--accent-bg); border: 1px solid var(--accent); color: var(--ink); font-weight: 700; padding: 10px 22px; border-radius: 8px; font-size: 15px; }
+  .primary:hover { filter: brightness(1.04); }
+  .ghost { background: none; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 16px; font-size: 13.5px; color: var(--ink-soft); }
+  .ghost:hover { border-color: var(--accent); color: var(--ink); }
+  .ghost.small { padding: 4px 10px; font-size: 12px; border-radius: 6px; white-space: nowrap; }
+  .ghost.small.resume { border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .ghost.speaking { border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .audio-note { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
+  .statline { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 18px; padding: 12px 16px; background: var(--surface2); border-radius: 10px; font-variant-numeric: tabular-nums; }
+  .statline div { font-size: 13px; color: var(--ink-soft); }
+  .statline b { display: block; font-size: 19px; color: var(--ink); font-family: var(--serif); }
+
+  /* study list */
+  .study-group { margin-top: 22px; }
+  .study-group > h2 { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 8px; }
+  .study-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; text-align: left; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-top: 6px; font-size: 14.5px; }
+  .study-item:hover { border-color: var(--accent); }
+  .study-item .t { font-family: var(--serif); }
+  .study-item .m { font-size: 12px; color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* doc reader */
+  .doc-toolbar { position: sticky; top: 0; background: var(--bg); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line); margin-bottom: 4px; z-index: 5; }
+  .doc-toolbar .spacer { flex: 1; }
+  .doc-hint { font-size: 11.5px; color: var(--ink-soft); }
+  article.doc { font-family: var(--serif); font-size: 16.5px; line-height: 1.65; max-width: 68ch; }
+  article.doc h1 { font-size: 28px; margin: 18px 0 6px; }
+  article.doc h2 { font-family: var(--serif); font-size: 21px; margin: 28px 0 8px; line-height: 1.25; text-wrap: balance; }
+  article.doc h3 { font-family: var(--sans); font-size: 15px; margin: 22px 0 6px; }
+  article.doc h4 { font-family: var(--sans); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin: 18px 0 4px; }
+  article.doc p, article.doc li { margin: 8px 0; }
+  article.doc pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.5; background: var(--surface2); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+  article.doc pre code { background: none; border: 0; padding: 0; white-space: pre; }
+  article.doc table { border-collapse: collapse; font-family: var(--sans); font-size: 13px; line-height: 1.45; display: block; overflow-x: auto; margin: 12px 0; }
+  article.doc th, article.doc td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; min-width: 110px; }
+  article.doc th { background: var(--surface2); font-size: 12px; }
+  article.doc blockquote { margin: 10px 0; padding: 4px 14px; border-left: 3px solid var(--accent); color: var(--ink-soft); }
+  article.doc hr { border: 0; border-top: 1px solid var(--line); margin: 22px 0; }
+  .reading { background: var(--accent-bg); border-radius: 4px; box-shadow: 0 0 0 4px var(--accent-bg); }
+  tr.reading td, tr.reading th { background: var(--accent-bg); }
+
+  /* question */
+  .qhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .qhead .prog { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-soft); white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+  .timer { font-family: var(--mono); font-size: 14px; padding: 2px 10px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .timer.low { color: var(--bad); border-color: var(--bad); font-weight: 700; }
+  .scen-banner { font-family: var(--serif); font-size: 15px; font-style: italic; color: var(--ink-soft); border-left: 3px solid var(--accent); padding: 6px 12px; margin: 0 0 14px; background: var(--surface); border-radius: 0 8px 8px 0; }
+  .qcard { padding: 22px 24px; }
+  .stem { font-family: var(--serif); font-size: 17.5px; line-height: 1.55; margin: 10px 0 18px; }
+  .opts { display: flex; flex-direction: column; gap: 10px; }
+  .opt { display: flex; gap: 12px; align-items: flex-start; text-align: left; width: 100%; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); font-size: 14.5px; line-height: 1.5; }
+  .opt:hover:not(:disabled) { border-color: var(--accent); background: var(--surface2); }
+  .opt:disabled { cursor: default; }
+  .opt .key { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--line-strong); display: grid; place-items: center; font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-top: 1px; }
+  .opt.right { border-color: var(--good); background: var(--good-bg); }
+  .opt.right .key { background: var(--good); border-color: var(--good); color: #fff; }
+  .opt.wrong { border-color: var(--bad); background: var(--bad-bg); }
+  .opt.wrong .key { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .opt.dim { opacity: .55; }
+  .verdict { margin-top: 16px; border-radius: 8px; padding: 14px 16px; font-size: 14px; }
+  .verdict.ok { background: var(--good-bg); border: 1px solid var(--good); }
+  .verdict.no { background: var(--bad-bg); border: 1px solid var(--bad); }
+  .verdict h3 { margin: 0 0 6px; font-size: 14px; }
+  .verdict .ex { font-family: var(--serif); font-size: 14.5px; line-height: 1.55; }
+  .rule { margin-top: 10px; padding: 8px 12px; background: var(--accent-bg); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; font-size: 13px; }
+  .rule b { letter-spacing: .1em; text-transform: uppercase; font-size: 10.5px; color: var(--accent-ink); display: block; margin-bottom: 2px; }
+  .qfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; }
+  .hint { font-size: 12px; color: var(--ink-soft); }
+
+  /* results */
+  .score-hero { text-align: center; padding: 28px 20px 22px; }
+  .score-hero .big { font-family: var(--serif); font-size: 56px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .score-hero .big small { font-size: 22px; color: var(--ink-soft); }
+  .badge { display: inline-block; margin-top: 8px; padding: 4px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .badge.pass { background: var(--good-bg); color: var(--good); border: 1px solid var(--good); }
+  .badge.fail { background: var(--bad-bg); color: var(--bad); border: 1px solid var(--bad); }
+  .passnote { font-size: 12.5px; color: var(--ink-soft); margin-top: 10px; }
+  .bars { padding: 6px 20px 18px; }
+  .bar-row { display: grid; grid-template-columns: minmax(140px, 1fr) 2fr 76px; gap: 12px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .bar-row:first-child { border-top: 0; }
+  .track { height: 8px; border-radius: 4px; background: var(--surface2); overflow: hidden; }
+  .fill { height: 100%; border-radius: 4px; background: var(--accent); }
+  .fill.lowacc { background: var(--bad); }
+  .bar-row .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+  details.miss { border: 1px solid var(--line); border-radius: 8px; margin-top: 10px; background: var(--surface); }
+  details.miss summary { cursor: pointer; padding: 12px 14px; font-family: var(--serif); font-size: 14.5px; line-height: 1.45; }
+  details.miss[open] summary { border-bottom: 1px solid var(--line); }
+  details.miss .body { padding: 12px 16px 14px; font-size: 13.5px; }
+  details.miss .body p { margin: 6px 0; }
+  .yourpick { color: var(--bad); } .rightpick { color: var(--good); }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); margin: 26px 0 8px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* spaced repetition + progress + study links */
+  .review-banner { display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; padding: 18px 20px; margin-top: 18px; border: 1px solid var(--accent); background: var(--accent-bg); border-radius: 12px; box-shadow: var(--shadow); }
+  .review-banner:hover { filter: brightness(1.03); }
+  .review-banner .rb-main { flex: 1; }
+  .review-banner h2 { margin: 0; font-family: var(--serif); font-size: 21px; }
+  .review-banner p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-soft); }
+  .review-banner .rb-count { text-align: center; flex: 0 0 auto; }
+  .review-banner .rb-count b { display: block; font-family: var(--serif); font-size: 34px; line-height: 1; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .review-banner .rb-count span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 12px; margin-top: 16px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .tile b { display: block; font-family: var(--serif); font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 12px; color: var(--ink-soft); }
+  .tile.hot b { color: var(--accent-ink); }
+  .prog .bar-row { grid-template-columns: minmax(130px, 1fr) 1.6fr 100px; }
+  .bar-row .wt { font-size: 11px; color: var(--ink-soft); font-style: normal; }
+  .grades { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .grade-hint { font-size: 12px; color: var(--ink-soft); margin-right: 4px; }
+  .grade { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 600; }
+  .grade:hover { border-color: var(--accent); }
+  .grade.again { color: var(--bad); } .grade.again:hover, .grade.again:focus-visible { background: var(--bad-bg); border-color: var(--bad); }
+  .grade.good { color: var(--good); } .grade.good:hover, .grade.good:focus-visible { background: var(--good-bg); border-color: var(--good); }
+  .grade.easy { color: var(--accent-ink); }
+  .study { margin-top: 12px; padding: 10px 12px; background: var(--surface2); border-radius: 8px; }
+  .study-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+  .study-focus { font-family: var(--serif); font-size: 13.5px; margin: 5px 0 7px; }
+  .slinks { display: flex; flex-wrap: wrap; align-items: center; font-size: 12.5px; }
+  .slink { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid transparent; cursor: pointer; }
+  .slink:hover { border-bottom-color: var(--accent); }
+  .slinks .slink:not(:last-child)::after { content: '·'; margin: 0 7px; color: var(--ink-soft); border-bottom: 0; }
+  .note-lbl { display: block; margin-top: 10px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+  textarea.note { display: block; width: 100%; margin-top: 4px; font: inherit; font-size: 13.5px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 9px; resize: vertical; box-sizing: border-box; }
+  .anchor-hit { background: var(--accent-bg) !important; border-radius: 4px; box-shadow: 0 0 0 6px var(--accent-bg); transition: background .6s ease, box-shadow .6s ease; }
+  .focus-card { border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--surface); border-radius: 8px; padding: 12px 14px; margin-top: 8px; }
+  .focus-card h3 { margin: 0 0 4px; font-family: var(--sans); font-size: 14px; }
+  .focus-card p { margin: 0 0 7px; font-size: 13px; color: var(--ink-soft); }
+
+  /* font size + dyslexia spacing (font family set via --serif/--sans from JS) */
+  :root { --fscale: 1; }
+  article.doc { font-size: calc(16.5px * var(--fscale)); }
+  .stem { font-size: calc(17.5px * var(--fscale)); }
+  .opt { font-size: calc(14.5px * var(--fscale)); }
+  .verdict .ex { font-size: calc(14.5px * var(--fscale)); }
+  .tmsg { font-size: calc(14.5px * var(--fscale)); }
+  details.miss summary { font-size: calc(14.5px * var(--fscale)); }
+  details.miss .body { font-size: calc(13.5px * var(--fscale)); }
+  :root[data-spacing="on"] article.doc { letter-spacing: .012em; word-spacing: .05em; line-height: 1.78; }
+  :root[data-spacing="on"] .stem, :root[data-spacing="on"] .opt, :root[data-spacing="on"] .verdict .ex, :root[data-spacing="on"] .tmsg, :root[data-spacing="on"] details.miss .body { letter-spacing: .012em; line-height: 1.62; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .qcard, .score-hero { animation: rise .25s ease-out; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    html { scroll-behavior: smooth; }
+  }
+
+  /* interactive tutor */
+  .tutor { position: fixed; right: 18px; bottom: 18px; left: auto; transform: none; width: min(400px, calc(100vw - 36px)); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 12px 48px rgba(0,0,0,.28); z-index: 40; display: flex; flex-direction: column; max-height: min(560px, 78vh); overflow: hidden; }
+  .tutor[hidden] { display: none; }
+  .tutor-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .tutor-title { font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); white-space: nowrap; }
+  .tutor-ctx { flex: 1; font-family: var(--serif); font-size: 13.5px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tutor-x { background: none; border: 0; font-size: 18px; color: var(--ink-soft); line-height: 1; padding: 2px 6px; cursor: pointer; }
+  .tutor-x:hover { color: var(--ink); }
+  .tutor-thread { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 56px; }
+  .tmsg { font-size: 14.5px; line-height: 1.5; padding: 9px 12px; border-radius: 10px; max-width: 88%; white-space: pre-wrap; }
+  .tmsg .who { display: block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-bottom: 3px; }
+  .tmsg.user { align-self: flex-end; background: var(--accent-bg); border: 1px solid var(--accent); }
+  .tmsg.assistant { align-self: flex-start; background: var(--surface2); border: 1px solid var(--line); font-family: var(--serif); }
+  .tutor-empty { color: var(--ink-soft); font-size: 13.5px; font-style: italic; align-self: center; padding: 8px; }
+  .tutor-status { padding: 0 16px; min-height: 18px; font-size: 12.5px; color: var(--ink-soft); }
+  .tutor-controls { display: flex; gap: 8px; align-items: center; padding: 12px 16px 16px; flex-wrap: wrap; }
+  .tutor-controls .primary { flex: 0 0 auto; }
+  .tutor-controls .primary.live { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+  #tutorText { flex: 1 1 140px; min-width: 120px; font: inherit; font-size: 14px; background: var(--bg); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; }
+  @media (max-width: 520px) { .tutor { right: 0; bottom: 0; width: 100%; border-radius: 14px 14px 0 0; max-height: 82vh; } #tutorText { flex-basis: 100%; order: 3; } }
+</style>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">CCAF <b>Study Hub</b></div>
+    <nav class="tabs">
+      <button id="tabStudy">Study</button>
+      <button id="tabPractice">Practice</button>
+      <button id="tabProgress">Progress</button>
+    </nav>
+    <button class="ghost small" id="homeBtn" hidden>End session</button>
+  </div>
+  <main id="app"></main>
+</div>
+
+<div id="tutorPanel" class="tutor" hidden>
+  <div class="tutor-head">
+    <span class="tutor-title">Tutor</span>
+    <span class="tutor-ctx" id="tutorCtx"></span>
+    <button class="tutor-x" id="tutorClose" aria-label="Close tutor">✕</button>
+  </div>
+  <div class="tutor-thread" id="tutorThread"></div>
+  <div class="tutor-status" id="tutorStatus"></div>
+  <div class="tutor-controls">
+    <button class="primary" id="tutorMic">🎤 Ask</button>
+    <input id="tutorText" placeholder="…or type your question" autocomplete="off">
+    <button class="ghost small" id="tutorSend">Send</button>
+    <button class="ghost small" id="tutorResume" hidden>▶ Resume reading</button>
+  </div>
+</div>
+
+<script>
+const BANK = /*__BANK__*/;
+const DOCS = /*__DOCS__*/;
+const STUDYMAP = /*__STUDYMAP__*/;
+const DOMAIN_DOC = { 1: 'domain-1-agentic-architecture', 2: 'domain-2-tool-design-mcp', 3: 'domain-3-claude-code-config', 4: 'domain-4-prompt-structured-output', 5: 'domain-5-context-reliability' };
+const SCEN_DOC = { s1: '01-customer-support-agent', s2: '02-claude-code-codegen', s3: '03-multi-agent-research', s4: '04-dev-productivity-agent', s5: '05-claude-code-ci', s6: '06-structured-extraction' };
+const START_DOC = '00-answer-physics';
+
+/* ---------- fonts + display ---------- */
+const FONTS = {
+  dyslexic:     { label: 'Reader — dyslexia-friendly (default)', serif: "Verdana, Tahoma, 'Trebuchet MS', system-ui, sans-serif", sans: "Verdana, Tahoma, 'Trebuchet MS', system-ui, sans-serif", spacing: true },
+  opendyslexic: { label: 'OpenDyslexic', serif: "'OpenDyslexic', Verdana, sans-serif", sans: "'OpenDyslexic', Verdana, sans-serif", spacing: true },
+  atkinson:     { label: 'Atkinson Hyperlegible', serif: "'Atkinson Hyperlegible', Verdana, sans-serif", sans: "'Atkinson Hyperlegible', Verdana, sans-serif", spacing: true },
+  comic:        { label: 'Comic Sans', serif: "'Comic Sans MS', 'Comic Sans', cursive", sans: "'Comic Sans MS', 'Comic Sans', cursive", spacing: true },
+  tahoma:       { label: 'Tahoma', serif: "Tahoma, Geneva, sans-serif", sans: "Tahoma, Geneva, sans-serif", spacing: false },
+  original:     { label: 'Original (serif + sans)', serif: "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif", sans: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", spacing: false },
+};
+function fontPrefs() { try { return JSON.parse(localStorage.getItem('ccaf-font-v1')) || {}; } catch { return {}; } }
+function saveFontPrefs(p) { try { localStorage.setItem('ccaf-font-v1', JSON.stringify(p)); } catch {} }
+function applyDisplay() {
+  const p = fontPrefs();
+  const f = FONTS[p.font] || FONTS.dyslexic;
+  const r = document.documentElement;
+  r.style.setProperty('--serif', f.serif);
+  r.style.setProperty('--sans', f.sans);
+  r.setAttribute('data-spacing', f.spacing ? 'on' : 'off');
+  r.style.setProperty('--fscale', String(p.scale || 1));
+}
+
+const DOMAINS = {
+  1: { name: 'Agentic Architecture & Orchestration', w: '27%' },
+  2: { name: 'Tool Design & MCP Integration', w: '18%' },
+  3: { name: 'Claude Code Configuration & Workflows', w: '20%' },
+  4: { name: 'Prompt Engineering & Structured Output', w: '20%' },
+  5: { name: 'Context Management & Reliability', w: '15%' },
+};
+const SCENARIOS = {
+  s1: 'Customer Support Resolution Agent',
+  s2: 'Code Generation with Claude Code',
+  s3: 'Multi-Agent Research System',
+  s4: 'Developer Productivity with Claude',
+  s5: 'Claude Code for Continuous Integration',
+  s6: 'Structured Data Extraction',
+};
+const PASS_PCT = 73; // proxy for 720/1000 scaled
+
+const TOKEN_RE = /(--[a-z][a-z-]+|~\/\.claude[.\w\/-]*|\.mcp\.json|\.claude\/[\w.\/-]*|CLAUDE\.md|SKILL\.md|\/memory\b|\/compact\b|\b[a-z][a-z0-9]*_[a-z0-9_]+\b|\bisError\b|\bisRetryable\b|\ballowedTools\b|\bAgentDefinition\b|\bPostToolUse\b|"(?:auto|any|tool_use|end_turn)")/g;
+
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function fmt(s) { return esc(s).replace(TOKEN_RE, m => '<code>' + m + '</code>'); }
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const $ = sel => document.querySelector(sel);
+const app = document.getElementById('app');
+const homeBtn = document.getElementById('homeBtn');
+
+/* ---------- persistence ---------- */
+const LS = 'ccaf-stats-v1';
+function loadStats() { try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; } }
+function saveStats(st) { try { localStorage.setItem(LS, JSON.stringify(st)); } catch {} }
+function recordAnswer(qid, ok) {
+  const st = loadStats(); st.q = st.q || {};
+  const e = st.q[qid] = st.q[qid] || { r: 0, w: 0 };
+  ok ? e.r++ : e.w++; e.last = ok ? 'r' : 'w';
+  saveStats(st);
+}
+function recordExam(pct) {
+  const st = loadStats();
+  if (st.bestExam == null || pct > st.bestExam) st.bestExam = pct;
+  st.lastExam = pct; saveStats(st);
+}
+function missedIds() { const st = loadStats(); return Object.keys(st.q || {}).filter(id => st.q[id].last === 'w'); }
+
+/* ---------- spaced repetition (SM-2 variant) + notes ---------- */
+const DAY = 86400000;
+function cardOf(qid) { const st = loadStats(); return (st.q && st.q[qid]) || null; }
+function srDefault() { return { ef: 2.5, iv: 0, reps: 0, due: 0, lapses: 0 }; }
+function getNote(qid) { const c = cardOf(qid); return (c && c.note) || ''; }
+function setNote(qid, txt) { const st = loadStats(); st.q = st.q || {}; const e = st.q[qid] = st.q[qid] || { r: 0, w: 0 }; e.note = txt; saveStats(st); }
+function gradeCard(qid, g, ok) {
+  const st = loadStats(); st.q = st.q || {}; const e = st.q[qid] = st.q[qid] || { r: 0, w: 0 };
+  const sr = e.sr || srDefault();
+  if (g === 'again') {
+    sr.reps = 0; sr.lapses = (sr.lapses || 0) + 1; sr.iv = 0; sr.ef = Math.max(1.3, sr.ef - 0.2); sr.due = Date.now() + 5 * 60 * 1000;
+  } else {
+    const q = g === 'hard' ? 3 : g === 'good' ? 4 : 5;
+    sr.ef = Math.max(1.3, sr.ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
+    sr.reps = (sr.reps || 0) + 1;
+    if (sr.reps === 1) sr.iv = g === 'easy' ? 4 : 1;
+    else if (sr.reps === 2) sr.iv = g === 'hard' ? 3 : 6;
+    else sr.iv = Math.max(1, Math.round(sr.iv * sr.ef * (g === 'hard' ? 0.8 : 1) * (g === 'easy' ? 1.3 : 1)));
+    sr.due = Date.now() + sr.iv * DAY;
+  }
+  sr.last = g; e.sr = sr; saveStats(st);
+}
+function cardStatus(qid) {
+  const c = cardOf(qid);
+  if (!c || !c.sr || (c.r + c.w) === 0) return 'new';
+  const sr = c.sr;
+  if (!sr.reps || sr.last === 'again') return 'learning';
+  return (sr.iv || 0) >= 21 ? 'mature' : 'young';
+}
+function isDue(qid) { const c = cardOf(qid); if (!c || !c.sr || (c.r + c.w) === 0) return true; return (c.sr.due || 0) <= Date.now(); }
+function dueList() { return BANK.questions.filter(q => isDue(q.id)); }
+
+/* ---------- study-guide cross-reference links ---------- */
+function studyLinksHTML(q) {
+  const scen = q.id.split('-')[0];
+  const sm = STUDYMAP[q.id] || {};
+  const links = [
+    `<a class="slink" data-doc="${DOMAIN_DOC[q.domain]}">D${q.domain} playbook</a>`,
+    `<a class="slink" data-doc="${SCEN_DOC[scen]}">${SCENARIOS[scen]}</a>`,
+  ];
+  (sm.principles || []).forEach(p => links.push(`<a class="slink" data-doc="${START_DOC}" data-anchor="${p.id}." title="${esc(p.title || '')}">Start Here · ${p.id}</a>`));
+  return links.join('');
+}
+function wireStudyLinks(root) {
+  (root || document).querySelectorAll('.slink').forEach(a => {
+    if (a._wired) return; a._wired = true;
+    a.addEventListener('click', e => { e.preventDefault(); showDoc(a.dataset.doc, a.dataset.anchor || null); });
+  });
+}
+function wireNotes(root) {
+  (root || document).querySelectorAll('textarea.note').forEach(t => {
+    if (t._wired) return; t._wired = true;
+    t.addEventListener('input', () => setNote(t.dataset.qid, t.value));
+  });
+}
+function verdictHTML(q, ok, correctPos) {
+  const sm = STUDYMAP[q.id] || {};
+  return `
+    <div class="verdict ${ok ? 'ok' : 'no'}">
+      <h3>${ok ? 'Correct' : 'Incorrect — the answer is ' + 'ABCD'[correctPos]}</h3>
+      <div class="ex">${fmt(q.explanation)}</div>
+      ${q.rule ? `<div class="rule"><b>The rule this drills</b>${fmt(q.rule)}</div>` : ''}
+      <div class="study">
+        <div class="study-lbl">Where to study this</div>
+        ${sm.focus ? `<p class="study-focus">${esc(sm.focus)}</p>` : ''}
+        <div class="slinks">${studyLinksHTML(q)}</div>
+      </div>
+      <label class="note-lbl">Your note
+        <textarea class="note" data-qid="${q.id}" rows="2" placeholder="A memory hook, why you missed it, a mnemonic…">${esc(getNote(q.id))}</textarea>
+      </label>
+    </div>`;
+}
+function missDetailHTML(q) {
+  const sm = STUDYMAP[q.id] || {};
+  return `<details class="miss">
+    <summary>${fmt(q.stem)}</summary>
+    <div class="body">
+      <p class="rightpick"><b>Correct (${'ABCD'[q.correct]}):</b> ${fmt(q.options[q.correct])}</p>
+      <p>${fmt(q.explanation)}</p>
+      ${q.rule ? `<div class="rule"><b>The rule</b>${fmt(q.rule)}</div>` : ''}
+      <div class="study"><div class="study-lbl">Where to study this</div>${sm.focus ? `<p class="study-focus">${esc(sm.focus)}</p>` : ''}<div class="slinks">${studyLinksHTML(q)}</div></div>
+      <label class="note-lbl">Your note<textarea class="note" data-qid="${q.id}" rows="2" placeholder="A memory hook, why you missed it…">${esc(getNote(q.id))}</textarea></label>
+    </div>
+  </details>`;
+}
+
+/* ---------- speech ---------- */
+const hasTTS = 'speechSynthesis' in window;
+const AK = 'ccaf-audio-v1';
+function audioPrefs() { try { return JSON.parse(localStorage.getItem(AK)) || {}; } catch { return {}; } }
+function saveAudioPrefs(p) { try { localStorage.setItem(AK, JSON.stringify(p)); } catch {} }
+
+let VOICES = [];
+function refreshVoices() { VOICES = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('en')); }
+if (hasTTS) {
+  refreshVoices();
+  speechSynthesis.addEventListener('voiceschanged', () => { refreshVoices(); populateVoiceSel(); });
+}
+function populateVoiceSel() {
+  const sel = document.getElementById('ttsVoice');
+  if (!sel || !VOICES.length) return;
+  const saved = audioPrefs().voice;
+  const preferred = pickVoice();
+  sel.innerHTML = VOICES.map(v =>
+    `<option value="${esc(v.name)}" ${(saved ? v.name === saved : v === preferred) ? 'selected' : ''}>${esc(v.name.replace(/^Microsoft |^Google /, ''))}</option>`
+  ).join('');
+}
+function pickVoice() {
+  const want = audioPrefs().voice;
+  if (want) { const v = VOICES.find(v => v.name === want); if (v) return v; }
+  return VOICES.find(v => /natural/i.test(v.name)) || VOICES.find(v => v.default) || VOICES[0] || null;
+}
+
+/* make technical tokens listenable */
+function speakable(s) {
+  return s
+    .replace(/`/g, '')
+    .replace(/--([a-z][a-z-]*)/g, (m, f) => f.replace(/-/g, ' ') + ' flag')
+    .replace(/~\/\.claude/g, 'home dot claude')
+    .replace(/\.mcp\.json/gi, 'dot M C P dot json')
+    .replace(/\.claude\//g, 'dot claude slash ')
+    .replace(/CLAUDE\.md/g, 'claude dot M D')
+    .replace(/SKILL\.md/g, 'skill dot M D')
+    .replace(/_/g, ' ')
+    .replace(/&/g, ' and ')
+    .replace(/[►▸→←]/g, ', ')
+    .replace(/\s+/g, ' ');
+}
+function chunk(text) {
+  const parts = [];
+  for (const seg of text.split(/(?<=[.!?;:])\s+/)) {
+    const t = seg.trim(); if (!t) continue;
+    if (parts.length && (parts[parts.length - 1] + ' ' + t).length <= 200) parts[parts.length - 1] += ' ' + t;
+    else parts.push(t);
+  }
+  return parts;
+}
+
+/* ---------- ElevenLabs engine ---------- */
+function engine() { return audioPrefs().engine === 'el' ? 'el' : 'system'; }
+const EL = { audio: null, abort: null, urls: [] };
+const elSession = { chars: 0, cachedChars: 0 };
+
+let idbP = null;
+function idb() {
+  if (!('indexedDB' in window)) return Promise.resolve(null);
+  idbP = idbP || new Promise(res => {
+    const r = indexedDB.open('ccaf-el-cache', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('audio');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => res(null);
+  });
+  return idbP;
+}
+async function cacheGet(k) {
+  const db = await idb(); if (!db) return null;
+  return new Promise(res => {
+    try {
+      const t = db.transaction('audio').objectStore('audio').get(k);
+      t.onsuccess = () => res(t.result || null); t.onerror = () => res(null);
+    } catch { res(null); }
+  });
+}
+async function cachePut(k, buf) {
+  const db = await idb(); if (!db) return;
+  try { db.transaction('audio', 'readwrite').objectStore('audio').put(buf, k); } catch {}
+}
+async function sha(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].slice(0, 16).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function updateElStatus() {
+  const el = document.getElementById('elStatus'); if (!el) return;
+  const mult = (audioPrefs().elModel || 'eleven_flash_v2_5') === 'eleven_multilingual_v2' ? 1 : 0.5;
+  el.textContent = elSession.chars || elSession.cachedChars
+    ? `≈${Math.round(elSession.chars * mult).toLocaleString()} credits used this session · ${elSession.cachedChars.toLocaleString()} characters replayed free from cache`
+    : '';
+}
+function elError(e) {
+  console.error(e);
+  alert(e.message || 'ElevenLabs request failed.');
+}
+async function elLoadVoices() {
+  const keyEl = document.getElementById('elKey');
+  const key = keyEl ? keyEl.value.trim() : audioPrefs().elKey;
+  if (!key) { alert('Paste your ElevenLabs API key first.'); return; }
+  saveAudioPrefs({ ...audioPrefs(), elKey: key });
+  try {
+    const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': key } });
+    if (!res.ok) throw new Error('ElevenLabs error ' + res.status + (res.status === 401 ? ' — check the key' : ''));
+    const j = await res.json();
+    const sel = document.getElementById('elVoice');
+    if (sel) {
+      sel.innerHTML = j.voices.map(v =>
+        `<option value="${esc(v.voice_id)}" ${audioPrefs().elVoice === v.voice_id ? 'selected' : ''}>${esc(v.name)}${v.category === 'cloned' ? ' · cloned' : ''}</option>`
+      ).join('');
+      const chosen = sel.selectedOptions[0];
+      if (chosen) saveAudioPrefs({ ...audioPrefs(), elVoice: chosen.value, elVoiceName: chosen.textContent });
+    }
+    const st = document.getElementById('elStatus');
+    if (st) st.textContent = j.voices.length + ' voices loaded from your account.';
+  } catch (e) { elError(e); }
+}
+async function elTTS(text, signal) {
+  const p = audioPrefs();
+  if (!p.elKey) throw new Error('No ElevenLabs API key — set it under Audio on the Practice tab.');
+  if (!p.elVoice) throw new Error('No ElevenLabs voice selected — hit “Load my voices” under Audio on the Practice tab.');
+  const model = p.elModel || 'eleven_flash_v2_5';
+  const k = await sha(p.elVoice + '|' + model + '|' + text);
+  const hit = await cacheGet(k);
+  if (hit) { elSession.cachedChars += text.length; updateElStatus(); return hit; }
+  const res = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(p.elVoice) + '?output_format=mp3_44100_64', {
+    method: 'POST', signal,
+    headers: { 'xi-api-key': p.elKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, model_id: model }),
+  });
+  if (!res.ok) {
+    let msg = '';
+    try { const j = await res.json(); msg = (j.detail && (j.detail.message || j.detail.status)) || ''; } catch {}
+    throw new Error('ElevenLabs error ' + res.status + (msg ? ': ' + msg : res.status === 401 ? ' — check your API key' : ''));
+  }
+  const buf = await res.arrayBuffer();
+  elSession.chars += text.length; updateElStatus();
+  cachePut(k, buf);
+  return buf;
+}
+function playBuffer(buf) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
+    EL.urls.push(url);
+    const a = new Audio(url);
+    a.playbackRate = audioPrefs().rate || 1;
+    EL.audio = a;
+    a.onended = a.onerror = () => resolve();
+    a.play().catch(() => resolve());
+  });
+}
+function elCleanup() {
+  if (EL.abort) { EL.abort.abort(); EL.abort = null; }
+  if (EL.audio) { EL.audio.onended = EL.audio.onerror = null; EL.audio.pause(); EL.audio = null; }
+  EL.urls.forEach(u => URL.revokeObjectURL(u)); EL.urls = [];
+}
+async function elSpeak(text, onDone) {
+  elCleanup();
+  const tok = ++speakToken;
+  setListenBtn(true);
+  EL.abort = new AbortController();
+  try {
+    const buf = await elTTS(speakable(text), EL.abort.signal);
+    if (tok !== speakToken) return;
+    await playBuffer(buf);
+  } catch (e) { if (e.name !== 'AbortError') elError(e); }
+  if (tok === speakToken) { setListenBtn(false); if (onDone) onDone(); }
+}
+async function elDocFrom(startIdx) {
+  elCleanup();
+  if (hasTTS) speechSynthesis.cancel();
+  speakToken++;
+  const tok = ++docSpeakToken;
+  setDocBtn(true);
+  EL.abort = new AbortController();
+  const texts = docBlocks.map(el => speakable(blockText(el)).trim());
+  let pending = null;
+  try {
+    for (let i = startIdx; i < docBlocks.length; i++) {
+      if (tok !== docSpeakToken) return;
+      if (!texts[i]) continue;
+      const bufP = pending && pending.i === i ? pending.p : elTTS(texts[i], EL.abort.signal);
+      let j = i + 1; while (j < texts.length && !texts[j]) j++;
+      if (j < texts.length) { const pf = elTTS(texts[j], EL.abort.signal); pf.catch(() => {}); pending = { i: j, p: pf }; }
+      else pending = null;
+      const buf = await bufP;
+      if (tok !== docSpeakToken) return;
+      clearReading(); docBlocks[i].classList.add('reading');
+      docBlocks[i].scrollIntoView({ block: 'center' });
+      await playBuffer(buf);
+    }
+  } catch (e) { if (e.name !== 'AbortError') elError(e); }
+  if (tok === docSpeakToken) { clearReading(); setDocBtn(false); }
+}
+
+let speakToken = 0;
+function speak(text, onDone) {
+  if (engine() === 'el') { if (hasTTS) speechSynthesis.cancel(); elSpeak(text, onDone); return; }
+  if (!hasTTS) return;
+  elCleanup();
+  speechSynthesis.cancel();
+  const myToken = ++speakToken;
+  const rate = audioPrefs().rate || 1;
+  const voice = pickVoice();
+  const parts = chunk(speakable(text));
+  setListenBtn(true);
+  let remaining = parts.length;
+  if (!remaining) { setListenBtn(false); if (onDone) onDone(); return; }
+  for (const p of parts) {
+    const u = new SpeechSynthesisUtterance(p);
+    u.rate = rate; if (voice) u.voice = voice;
+    u.onend = u.onerror = () => {
+      if (--remaining === 0 && myToken === speakToken) { setListenBtn(false); if (onDone) onDone(); }
+    };
+    speechSynthesis.speak(u);
+  }
+}
+function stopSpeak() {
+  speakToken++; docSpeakToken++;
+  if (hasTTS) speechSynthesis.cancel();
+  elCleanup();
+  setListenBtn(false); setDocBtn(false); clearReading();
+}
+function setListenBtn(on) {
+  const b = document.getElementById('listenBtn');
+  if (b) { b.classList.toggle('speaking', on); b.textContent = on ? '⏹ Stop' : '🔊 Listen'; }
+}
+
+function questionSpeech(q, includeScenario) {
+  let t = includeScenario ? 'Scenario: ' + SCENARIOS[q.id.split('-')[0]] + '. ' : '';
+  t += q.stem + ' ';
+  S.current.order.forEach((oi, pos) => { t += 'Option ' + 'ABCD'[pos] + '. ' + q.options[oi] + ' '; });
+  return t;
+}
+function verdictSpeech(a) {
+  let t = a.ok ? 'Correct. ' : 'Incorrect. The correct answer is ' + 'ABCD'[a.order.indexOf(a.q.correct)] + '. ';
+  t += a.q.explanation + ' ';
+  if (a.q.rule) t += 'The rule this drills: ' + a.q.rule;
+  return t;
+}
+function speakCurrent() {
+  if (!S.current) return;
+  const btn = document.getElementById('listenBtn');
+  if (btn && btn.classList.contains('speaking')) { stopSpeak(); return; }
+  if (S.current.picked == null) speak(questionSpeech(S.current.q, true));
+  else speak(verdictSpeech(S.answers[S.answers.length - 1]));
+}
+
+/* ---------- doc read-along ---------- */
+let docBlocks = [], docSpeakToken = 0;
+function clearReading() { document.querySelectorAll('.reading').forEach(el => el.classList.remove('reading')); }
+function setDocBtn(on) {
+  const b = document.getElementById('docListenBtn');
+  if (b) { b.classList.toggle('speaking', on); b.textContent = on ? '⏹ Stop' : '▶ Listen to this doc'; }
+}
+function collectBlocks() {
+  docBlocks = [...document.querySelectorAll('article.doc h1, article.doc h2, article.doc h3, article.doc h4, article.doc p, article.doc li, article.doc tr, article.doc pre')]
+    .filter(el => !(el.tagName === 'P' && el.parentElement.tagName === 'LI'));
+}
+function blockText(el) {
+  if (el.tagName === 'PRE') return 'Code example, shown on screen.';
+  if (el.tagName === 'TR') return [...el.children].map(c => c.textContent.trim()).filter(Boolean).join('. ');
+  if (el.tagName === 'LI') { const c = el.cloneNode(true); c.querySelectorAll('ul,ol').forEach(u => u.remove()); return c.textContent; }
+  if (/^H\d$/.test(el.tagName)) return 'Section. ' + el.textContent + '.';
+  return el.textContent;
+}
+function speakDocFrom(startIdx) {
+  if (engine() === 'el') { clearReading(); elDocFrom(startIdx); return; }
+  if (!hasTTS) return;
+  elCleanup();
+  speakToken++; speechSynthesis.cancel(); clearReading();
+  const tok = ++docSpeakToken;
+  const rate = audioPrefs().rate || 1;
+  const voice = pickVoice();
+  setDocBtn(true);
+  const step = idx => {
+    if (tok !== docSpeakToken) return;
+    if (idx >= docBlocks.length) { clearReading(); setDocBtn(false); return; }
+    const el = docBlocks[idx];
+    clearReading(); el.classList.add('reading');
+    el.scrollIntoView({ block: 'center' });
+    const parts = chunk(speakable(blockText(el)));
+    if (!parts.length) { step(idx + 1); return; }
+    let rem = parts.length;
+    for (const p of parts) {
+      const u = new SpeechSynthesisUtterance(p);
+      u.rate = rate; if (voice) u.voice = voice;
+      u.onend = u.onerror = () => { if (--rem === 0 && tok === docSpeakToken) step(idx + 1); };
+      speechSynthesis.speak(u);
+    }
+  };
+  step(startIdx);
+}
+
+/* ---------- interactive tutor ---------- */
+const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+const TUTOR = { ctx: null, messages: [], sig: null, rec: null, listening: false, resumeIdx: null };
+
+function tEls() {
+  return {
+    panel: document.getElementById('tutorPanel'),
+    ctx: document.getElementById('tutorCtx'),
+    thread: document.getElementById('tutorThread'),
+    status: document.getElementById('tutorStatus'),
+    mic: document.getElementById('tutorMic'),
+    text: document.getElementById('tutorText'),
+    send: document.getElementById('tutorSend'),
+    resume: document.getElementById('tutorResume'),
+    close: document.getElementById('tutorClose'),
+  };
+}
+
+function docPlainText(id) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = DOCS.items[id].html;
+  return tmp.textContent.replace(/\s+/g, ' ').trim();
+}
+
+function tutorSystem() {
+  const c = TUTOR.ctx;
+  let s = `You are a warm, sharp study tutor helping a student prepare for the "Claude Certified Architect – Foundations" certification exam. Answer conversationally and briefly — your reply is READ ALOUD, so keep it to 2–4 sentences of plain spoken English. No markdown, no bullet points, no code blocks; if you must mention a function or config key, say it in words. Ground answers in the exam's doctrine: fix the root cause; use programmatic enforcement (hooks, prerequisite gates) whenever money or compliance is at stake; prefer the proportionate first step over new infrastructure; apply least privilege; and match the API to the latency requirement. Be encouraging and direct.`;
+  if (!c) return s;
+  if (c.kind === 'question') {
+    const q = c.q;
+    const opts = q.options.map((o, i) => `${'ABCD'[i]}. ${o}`).join('\n');
+    s += `\n\nThe student is looking at this practice question.\nScenario: ${SCENARIOS[q.id.split('-')[0]]}\nQuestion: ${q.stem}\nOptions:\n${opts}\nThe correct answer is ${'ABCD'[q.correct]}. Official explanation: ${q.explanation}` + (q.rule ? `\nThe rule it drills: ${q.rule}` : '');
+  } else if (c.kind === 'doc') {
+    s += `\n\nThe student is studying a document titled "${c.title}". Here is its full text:\n\n${c.text}`;
+    if (c.current) s += `\n\nThey are currently on this passage: "${c.current}"`;
+  }
+  return s;
+}
+
+function openTutor(ctx) {
+  stopSpeak();
+  const sig = ctx.kind + '|' + (ctx.id || (ctx.q && ctx.q.id) || '');
+  if (TUTOR.sig !== sig) { TUTOR.messages = []; TUTOR.sig = sig; }
+  TUTOR.ctx = ctx;
+  TUTOR.resumeIdx = (ctx.resumeIdx != null) ? ctx.resumeIdx : null;
+  const els = tEls();
+  els.panel.hidden = false;
+  els.ctx.textContent = ctx.kind === 'doc' ? ctx.title : ('Question · ' + SCENARIOS[ctx.q.id.split('-')[0]]);
+  els.resume.hidden = !(ctx.kind === 'doc' && TUTOR.resumeIdx != null);
+  els.text.value = '';
+  renderTutorThread();
+  if (SRClass) startListening();
+  else { setTutorStatus('idle'); els.text.focus(); }
+}
+
+function closeTutor() {
+  stopListening();
+  stopSpeak();
+  tEls().panel.hidden = true;
+}
+
+function setTutorStatus(s) {
+  const map = { idle: '', listening: '🔴 Listening — speak your question', thinking: '💭 Thinking…', speaking: '🔊 Answering…' };
+  tEls().status.textContent = map[s] || '';
+  const mic = tEls().mic;
+  mic.classList.toggle('live', s === 'listening');
+  mic.textContent = s === 'listening' ? '⏹ Stop' : '🎤 Ask';
+}
+
+function renderTutorThread() {
+  const el = tEls().thread;
+  if (!TUTOR.messages.length) {
+    el.innerHTML = `<div class="tutor-empty">${SRClass ? 'Tap the mic and ask anything about this.' : 'Type a question below and hit Send.'}</div>`;
+    return;
+  }
+  el.innerHTML = TUTOR.messages.map(m =>
+    `<div class="tmsg ${m.role}"><span class="who">${m.role === 'user' ? 'You' : 'Tutor'}</span>${esc(m.content)}</div>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function startListening() {
+  const els = tEls();
+  if (!SRClass) { els.text.focus(); return; }
+  stopSpeak();
+  const rec = new SRClass();
+  rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  let finalT = '';
+  rec.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalT += t; else interim += t;
+    }
+    els.text.value = (finalT + ' ' + interim).trim();
+  };
+  rec.onerror = (e) => {
+    TUTOR.listening = false; setTutorStatus('idle');
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed')
+      alert('Microphone is blocked. Allow mic access for this site, or type your question and hit Send.');
+  };
+  rec.onend = () => {
+    TUTOR.listening = false;
+    const q = els.text.value.trim();
+    if (q) { els.text.value = ''; submitTutor(q); }
+    else setTutorStatus('idle');
+  };
+  TUTOR.rec = rec; TUTOR.listening = true;
+  setTutorStatus('listening');
+  try { rec.start(); } catch (_) { TUTOR.listening = false; setTutorStatus('idle'); }
+}
+
+function stopListening() {
+  if (TUTOR.rec && TUTOR.listening) { try { TUTOR.rec.stop(); } catch (_) {} }
+  TUTOR.listening = false;
+}
+
+async function submitTutor(question) {
+  const key = audioPrefs().anthKey;
+  if (!key) { setTutorStatus('idle'); alert('Add your Anthropic API key under Audio → Tutor on the Practice tab to use the tutor.'); return; }
+  TUTOR.messages.push({ role: 'user', content: question });
+  renderTutorThread();
+  setTutorStatus('thinking');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 800,
+        system: [{ type: 'text', text: tutorSystem(), cache_control: { type: 'ephemeral' } }],
+        messages: TUTOR.messages,
+      }),
+    });
+    if (!res.ok) {
+      let msg = 'Tutor error ' + res.status + (res.status === 401 ? ' — check your Anthropic API key' : '');
+      try { const j = await res.json(); if (j.error && j.error.message) msg = j.error.message; } catch (_) {}
+      throw new Error(msg);
+    }
+    const j = await res.json();
+    if (j.usage) {
+      const u = j.usage;
+      console.log(`[tutor cache] cache_read_input_tokens=${u.cache_read_input_tokens || 0} cache_creation_input_tokens=${u.cache_creation_input_tokens || 0} input_tokens=${u.input_tokens || 0}`);
+    }
+    const text = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').trim() || 'Sorry — I did not catch that. Try asking again.';
+    TUTOR.messages.push({ role: 'assistant', content: text });
+    renderTutorThread();
+    setTutorStatus('speaking');
+    speak(text, () => setTutorStatus('idle'));
+  } catch (e) {
+    setTutorStatus('idle');
+    TUTOR.messages.push({ role: 'assistant', content: '⚠️ ' + (e.message || 'Something went wrong.') });
+    renderTutorThread();
+  }
+}
+
+function initTutor() {
+  const els = tEls();
+  els.mic.addEventListener('click', () => { TUTOR.listening ? stopListening() : startListening(); });
+  els.send.addEventListener('click', () => {
+    const q = els.text.value.trim();
+    if (q) { els.text.value = ''; stopListening(); submitTutor(q); }
+  });
+  els.text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); els.send.click(); } });
+  els.close.addEventListener('click', closeTutor);
+  els.resume.addEventListener('click', () => {
+    const idx = TUTOR.resumeIdx;
+    stopListening();
+    els.panel.hidden = true;
+    if (idx != null) speakDocFrom(idx);
+  });
+}
+
+/* ---------- state + nav ---------- */
+let S = {};
+let timerId = null;
+let currentDoc = null;
+function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+function guardSession() {
+  if (S.mode && !S.done) { if (!confirm('End this session? Progress is lost.')) return false; }
+  stopTimer(); stopSpeak(); S = {}; homeBtn.hidden = true;
+  return true;
+}
+function setTab(t) {
+  $('#tabStudy').classList.toggle('active', t === 'study');
+  $('#tabPractice').classList.toggle('active', t === 'practice');
+  $('#tabProgress').classList.toggle('active', t === 'progress');
+}
+$('#tabStudy').addEventListener('click', () => { if (guardSession()) showStudy(); });
+$('#tabPractice').addEventListener('click', () => { if (guardSession()) home(); });
+$('#tabProgress').addEventListener('click', () => { if (guardSession()) showProgress(); });
+homeBtn.addEventListener('click', () => { if (guardSession()) home(); });
+
+/* ---------- study ---------- */
+function showStudy() {
+  setTab('study'); currentDoc = null; stopSpeak();
+  const groups = {};
+  for (const id of DOCS.order) {
+    const d = DOCS.items[id];
+    (groups[d.group] = groups[d.group] || []).push([id, d]);
+  }
+  app.innerHTML = `
+    <div class="eyebrow">Claude Certified Architect — Foundations</div>
+    <h1>Study</h1>
+    <p class="sub">Every doc can be read to you: open one and hit “Listen”, or double-click any paragraph to start from there. It highlights and scrolls as it reads.</p>
+    ${Object.entries(groups).map(([g, items]) => `
+      <div class="study-group">
+        <h2>${g}</h2>
+        ${items.map(([id, d]) => `
+          <button class="study-item" data-doc="${id}">
+            <span class="t">${d.title}</span>
+            <span class="m">~${Math.max(1, Math.round(d.words / 200))} min read · ${Math.max(1, Math.round(d.words / 160))} min listen</span>
+          </button>`).join('')}
+      </div>`).join('')}
+  `;
+  document.querySelectorAll('.study-item').forEach(b => b.addEventListener('click', () => showDoc(b.dataset.doc)));
+  window.scrollTo(0, 0);
+}
+
+function showDoc(id, anchor) {
+  setTab('study'); stopSpeak(); currentDoc = id;
+  const inSession = !!(S.mode && !S.done);
+  homeBtn.hidden = true;
+  const d = DOCS.items[id];
+  app.innerHTML = `
+    <div class="doc-toolbar">
+      ${inSession ? `<button class="ghost small resume" id="docResume">← Back to your ${S.mode === 'review' ? 'review' : S.mode === 'exam' ? 'exam' : 'drill'}</button>` : ''}
+      <button class="ghost small" id="docBack">← All docs</button>
+      <button class="ghost small" id="docAskBtn">🎤 Ask about this</button>
+      ${hasTTS ? `<button class="ghost small" id="docListenBtn">▶ Listen to this doc</button>
+      <span class="spacer"></span>
+      <span class="doc-hint">Double-click a paragraph to listen from there · R restarts</span>` : '<span class="spacer"></span>'}
+    </div>
+    <article class="doc">${d.html}</article>
+    <div class="actions">
+      <button class="ghost" id="docBack2">← All docs</button>
+    </div>
+  `;
+  $('#docBack').addEventListener('click', showStudy);
+  $('#docBack2').addEventListener('click', showStudy);
+  collectBlocks();
+  $('#docAskBtn').addEventListener('click', () => {
+    const readingEl = document.querySelector('article.doc .reading');
+    let curIdx = null, curText = '';
+    if (readingEl) { curIdx = docBlocks.indexOf(readingEl); curText = blockText(readingEl); }
+    openTutor({ kind: 'doc', id: currentDoc, title: DOCS.items[currentDoc].title, text: docPlainText(currentDoc), current: curText || null, resumeIdx: curIdx });
+  });
+  const drz = $('#docResume'); if (drz) drz.addEventListener('click', resumeSession);
+  if (hasTTS) {
+    $('#docListenBtn').addEventListener('click', () => {
+      if ($('#docListenBtn').classList.contains('speaking')) stopSpeak();
+      else speakDocFrom(0);
+    });
+    $('.doc') && document.querySelector('article.doc').addEventListener('dblclick', e => {
+      const el = e.target.closest('h1,h2,h3,h4,p,li,tr,pre');
+      if (!el) return;
+      const idx = docBlocks.indexOf(el);
+      if (idx >= 0) speakDocFrom(idx);
+    });
+  }
+  if (anchor) {
+    const hs = [...document.querySelectorAll('article.doc h1, article.doc h2, article.doc h3, article.doc h4')];
+    const h = hs.find(el => el.textContent.trim().toLowerCase().startsWith(anchor.toLowerCase())) || hs.find(el => el.textContent.toLowerCase().includes(anchor.toLowerCase()));
+    if (h) { h.classList.add('anchor-hit'); h.scrollIntoView({ block: 'start' }); setTimeout(() => h.classList.remove('anchor-hit'), 2600); return; }
+  }
+  window.scrollTo(0, 0);
+}
+
+/* ---------- practice home ---------- */
+function home() {
+  setTab('practice'); currentDoc = null; S = {}; homeBtn.hidden = true;
+  const st = loadStats();
+  const seen = Object.keys(st.q || {}).length;
+  const right = Object.values(st.q || {}).reduce((n, e) => n + e.r, 0);
+  const total = Object.values(st.q || {}).reduce((n, e) => n + e.r + e.w, 0);
+  const missed = missedIds().length;
+  const dueNow = dueList().length;
+
+  app.innerHTML = `
+    <div class="eyebrow">Claude Certified Architect — Foundations</div>
+    <h1>Practice</h1>
+    <p class="sub">${BANK.questions.length} scenario-based questions, adversarially verified against the official exam guide (v0.2). Real exam: 60 questions, 120 minutes, pass ≈ ${PASS_PCT}%.</p>
+
+    <button class="review-banner" id="reviewGo">
+      <div class="rb-main"><h2>Review — spaced repetition</h2><p>Anki-style: cards come back on a schedule set by how well you know them. Your daily driver — grade each answer, notes stick to it.</p></div>
+      <div class="rb-count"><b>${dueNow}</b><span>due now</span></div>
+    </button>
+
+    <div class="modes">
+      <button class="mode" id="drillGo">
+        <h2>Drill</h2>
+        <p>Pick scenarios and domains. Instant feedback — and it can read every question and explanation aloud.</p>
+        <span class="go">Start drill →</span>
+      </button>
+      <button class="mode" id="examGo">
+        <h2>Exam simulation</h2>
+        <p>4 random scenarios × 10 questions, 80-minute clock, answer to advance — scored at the end like the real thing.</p>
+        <span class="go">Start exam →</span>
+      </button>
+    </div>
+
+    <fieldset>
+      <legend>Reading — font &amp; size</legend>
+      <div class="row" style="margin-top:0">
+        <label>Font <select id="fontSel">
+          ${Object.entries(FONTS).map(([k, f]) => `<option value="${k}" ${(fontPrefs().font || 'dyslexic') === k ? 'selected' : ''}>${f.label}</option>`).join('')}
+        </select></label>
+        <label>Size <select id="fsSel">
+          ${[['0.9', 'Small'], ['1', 'Medium'], ['1.25', 'Large'], ['1.5', 'X-Large'], ['1.8', 'Huge']].map(([v, n]) => `<option value="${v}" ${String(fontPrefs().scale || 1) === v ? 'selected' : ''}>${n}</option>`).join('')}
+        </select></label>
+      </div>
+      <p class="audio-note">Defaults to a dyslexia-friendly font with roomier letter and line spacing. Fonts are personal — try a few and keep what reads easiest. Applies everywhere: docs, questions, notes, and the tutor.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Drill setup</legend>
+      <div class="chips" id="scenChips">
+        ${Object.entries(SCENARIOS).map(([k, v]) => `<label class="chip"><input type="checkbox" data-scen="${k}" checked><span>${v}</span></label>`).join('')}
+      </div>
+      <div class="chips" style="margin-top:10px" id="domChips">
+        ${Object.entries(DOMAINS).map(([k, v]) => `<label class="chip"><input type="checkbox" data-dom="${k}" checked><span>D${k} · ${v.name} (${v.w})</span></label>`).join('')}
+      </div>
+      <div class="row">
+        <label>Questions <select id="countSel"><option>10</option><option selected>20</option><option value="999">All matching</option></select></label>
+        <label><input type="checkbox" id="missOnly" ${missed ? '' : 'disabled'}> Missed only (${missed})</label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Audio</legend>
+      <div class="row" style="margin-top:0">
+        <label>Engine <select id="engineSel">
+          <option value="system" ${engine() === 'system' ? 'selected' : ''}>System voices (free)</option>
+          <option value="el" ${engine() === 'el' ? 'selected' : ''}>ElevenLabs (your account)</option>
+        </select></label>
+        <label><input type="checkbox" id="ttsAuto" ${audioPrefs().auto ? 'checked' : ''}> Read questions aloud automatically</label>
+        <label>Speed <select id="ttsRate">
+          ${[['0.85', 'Slower'], ['1', 'Normal'], ['1.15', 'Brisk'], ['1.3', 'Fast'], ['1.5', 'Faster']].map(([v, n]) => `<option value="${v}" ${String(audioPrefs().rate || 1) === v ? 'selected' : ''}>${n}</option>`).join('')}
+        </select></label>
+        <button class="ghost small" id="ttsTest">Test voice</button>
+      </div>
+      <div id="sysPanel" ${engine() === 'el' ? 'hidden' : ''}>
+        ${hasTTS ? `
+        <div class="row">
+          <label>Voice <select id="ttsVoice"></select></label>
+        </div>
+        <p class="audio-note">System voices are free and unlimited. Best quality: open this page in Microsoft Edge and pick a “Natural” voice. R replays the current question.</p>
+        ` : '<p class="audio-note">This browser has no speech synthesis — use Edge or Chrome, or switch the engine to ElevenLabs.</p>'}
+      </div>
+      <div id="elPanel" ${engine() === 'el' ? '' : 'hidden'}>
+        <div class="row">
+          <label>API key <input type="password" id="elKey" placeholder="xi-…" value="${esc(audioPrefs().elKey || '')}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:180px"></label>
+          <button class="ghost small" id="elLoad">Load my voices</button>
+          <label>Voice <select id="elVoice">${audioPrefs().elVoiceName ? `<option value="${esc(audioPrefs().elVoice || '')}" selected>${esc(audioPrefs().elVoiceName)}</option>` : '<option value="">— load voices —</option>'}</select></label>
+          <label>Model <select id="elModel">
+            ${[['eleven_flash_v2_5', 'Flash — cheapest + fastest'], ['eleven_turbo_v2_5', 'Turbo — balanced'], ['eleven_multilingual_v2', 'Multilingual — best quality, 2× cost']].map(([v, n]) => `<option value="${v}" ${(audioPrefs().elModel || 'eleven_flash_v2_5') === v ? 'selected' : ''}>${n}</option>`).join('')}
+          </select></label>
+        </div>
+        <p class="audio-note" id="elStatus"></p>
+        <p class="audio-note">Your key stays in this browser (localStorage) and is sent only to ElevenLabs — it is never in the site or repo. Tip: create a key restricted to Text-to-Speech in your ElevenLabs dashboard. Audio is cached locally, so re-listening to a question is free; first listen costs roughly 500–700 credits per question on Flash, and a full study doc runs 10–25K — use system voices for long docs unless you have credits to burn. ElevenLabs works on the GitHub Pages site; the claude.ai artifact copy blocks outside APIs.</p>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Tutor — ask questions out loud</legend>
+      <div class="row" style="margin-top:0">
+        <label>Anthropic API key <input type="password" id="anthKey" placeholder="sk-ant-…" value="${esc(audioPrefs().anthKey || '')}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:190px"></label>
+      </div>
+      <p class="audio-note">Powers the “🎤 Ask” button on study docs and on questions you’ve answered — tap it, ask out loud like you would in class, and the tutor answers in whatever voice you picked above. Runs on Claude Haiku (~a cent per question, cheaper on follow-ups). Your key is stored only in this browser and sent only to Anthropic; works on the GitHub Pages site, not the claude.ai copy. ${SRClass ? 'For the most natural-sounding answers, select the ElevenLabs engine above.' : 'This browser can’t use the microphone — you’ll type questions instead. Chrome or Edge give you voice input.'}</p>
+    </fieldset>
+
+    ${total ? `<div class="statline">
+      <div>Questions seen<b>${seen} / ${BANK.questions.length}</b></div>
+      <div>Lifetime accuracy<b>${Math.round(100 * right / total)}%</b></div>
+      <div>Best exam sim<b>${st.bestExam != null ? st.bestExam + '%' : '—'}</b></div>
+      <div>Currently missed<b>${missed}</b></div>
+    </div>` : ''}
+  `;
+  $('#drillGo').addEventListener('click', startDrill);
+  $('#examGo').addEventListener('click', startExam);
+  $('#reviewGo').addEventListener('click', startReview);
+  $('#fontSel').addEventListener('change', e => { saveFontPrefs({ ...fontPrefs(), font: e.target.value }); applyDisplay(); });
+  $('#fsSel').addEventListener('change', e => { saveFontPrefs({ ...fontPrefs(), scale: +e.target.value }); applyDisplay(); });
+  if (hasTTS) populateVoiceSel();
+  const tv = $('#ttsVoice');
+  if (tv) tv.addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), voice: e.target.value }));
+  $('#ttsAuto').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), auto: e.target.checked }));
+  $('#ttsRate').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), rate: +e.target.value }));
+  $('#ttsTest').addEventListener('click', () => speak('Block process_refund until get_customer returns a verified customer ID. That is the sound of a passing score.'));
+  $('#engineSel').addEventListener('change', e => {
+    saveAudioPrefs({ ...audioPrefs(), engine: e.target.value });
+    $('#sysPanel').hidden = e.target.value === 'el';
+    $('#elPanel').hidden = e.target.value !== 'el';
+  });
+  $('#elKey').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), elKey: e.target.value.trim() }));
+  $('#elLoad').addEventListener('click', elLoadVoices);
+  $('#elVoice').addEventListener('change', e => {
+    const name = e.target.selectedOptions[0] ? e.target.selectedOptions[0].textContent : '';
+    saveAudioPrefs({ ...audioPrefs(), elVoice: e.target.value, elVoiceName: name });
+  });
+  $('#elModel').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), elModel: e.target.value }));
+  $('#anthKey').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), anthKey: e.target.value.trim() }));
+  updateElStatus();
+  window.scrollTo(0, 0);
+}
+
+function startDrill() {
+  const scens = [...document.querySelectorAll('#scenChips input:checked')].map(i => i.dataset.scen);
+  const doms = [...document.querySelectorAll('#domChips input:checked')].map(i => +i.dataset.dom);
+  const count = +$('#countSel').value;
+  const missOnly = $('#missOnly').checked;
+  const missSet = new Set(missedIds());
+  let pool = BANK.questions.filter(q => scens.includes(q.id.split('-')[0]) && doms.includes(q.domain));
+  if (missOnly) pool = pool.filter(q => missSet.has(q.id));
+  if (!pool.length) { alert('No questions match those filters.'); return; }
+  begin({ mode: 'drill', queue: shuffle(pool).slice(0, count) });
+}
+
+function startExam() {
+  const scens = shuffle(Object.keys(SCENARIOS)).slice(0, 4);
+  const queue = scens.flatMap(s => shuffle(BANK.questions.filter(q => q.id.startsWith(s + '-'))));
+  begin({ mode: 'exam', queue, deadline: Date.now() + queue.length * 2 * 60 * 1000 });
+}
+
+function startReview() {
+  const due = dueList();
+  const seen = due.filter(q => { const c = cardOf(q.id); return c && (c.r + c.w) > 0; })
+                  .sort((a, b) => ((cardOf(a.id).sr || {}).due || 0) - ((cardOf(b.id).sr || {}).due || 0));
+  const fresh = due.filter(q => { const c = cardOf(q.id); return !c || (c.r + c.w) === 0; });
+  const queue = shuffle([...seen, ...fresh].slice(0, 30));
+  if (!queue.length) { alert('Nothing due right now — you\'re caught up. Come back later, or use Drill to grind extra questions.'); return; }
+  begin({ mode: 'review', queue });
+}
+
+function gradeAndNext(q, g, ok) {
+  gradeCard(q.id, g, ok);
+  if (g === 'again') S.queue.push(q);
+  next();
+}
+
+function finishReview() {
+  stopTimer(); stopSpeak(); S.done = true; homeBtn.hidden = true;
+  const reviewed = S.answers.length;
+  const right = S.answers.filter(a => a.ok).length;
+  const remaining = dueList().length;
+  app.innerHTML = `
+    <div class="card score-hero">
+      <div class="eyebrow">Review complete</div>
+      <div class="big">${reviewed}</div>
+      <div>cards reviewed · ${right} first-try correct</div>
+      <div class="passnote">${remaining ? remaining + ' still due — keep going, or come back later.' : 'Caught up. Nothing else due right now.'}</div>
+    </div>
+    <div class="actions">
+      ${remaining ? '<button class="primary" id="moreBtn">Review more</button>' : ''}
+      <button class="ghost" id="progBtn">See progress</button>
+      <button class="ghost" id="backBtn">Practice home</button>
+    </div>`;
+  const mo = $('#moreBtn'); if (mo) mo.addEventListener('click', startReview);
+  $('#progBtn').addEventListener('click', showProgress);
+  $('#backBtn').addEventListener('click', home);
+  window.scrollTo(0, 0);
+}
+
+function begin(cfg) {
+  S = { ...cfg, idx: 0, answers: [], done: false };
+  homeBtn.hidden = false;
+  if (S.mode === 'exam') {
+    timerId = setInterval(() => {
+      const el = $('#timer'); if (!el) return;
+      const left = S.deadline - Date.now();
+      if (left <= 0) { stopTimer(); finish(); return; }
+      const m = Math.floor(left / 60000), s = Math.floor(left % 60000 / 1000);
+      el.textContent = m + ':' + String(s).padStart(2, '0');
+      el.classList.toggle('low', left < 10 * 60 * 1000);
+    }, 500);
+  }
+  renderQ();
+}
+
+/* ---------- question ---------- */
+function renderQ() { paintQuestion(true); }
+
+function paintQuestion(fresh) {
+  const q = S.queue[S.idx];
+  const scen = q.id.split('-')[0];
+  const newScen = S.idx === 0 || S.queue[S.idx - 1].id.split('-')[0] !== scen;
+  if (fresh || !S.current || S.current.q !== q) S.current = { q, order: shuffle([0, 1, 2, 3]), picked: null };
+  const order = S.current.order;
+
+  app.innerHTML = `
+    <div class="qhead">
+      <span class="eyebrow"><b>${SCENARIOS[scen]}</b> · D${q.domain} ${DOMAINS[q.domain].name}${q.difficulty === 'stretch' ? ' · stretch' : ''}</span>
+      <span class="prog">${hasTTS ? '<button class="ghost small" id="listenBtn">🔊 Listen</button>' : ''}${S.idx + 1} / ${S.queue.length}${S.mode === 'exam' ? ' <span class="timer" id="timer">—</span>' : ''}</span>
+    </div>
+    ${newScen && S.mode === 'exam' ? `<p class="scen-banner">Scenario: ${SCENARIOS[scen]}</p>` : ''}
+    <div class="card qcard">
+      <div class="stem">${fmt(q.stem)}</div>
+      <div class="opts" id="opts">
+        ${order.map((oi, pos) => `
+          <button class="opt" data-pos="${pos}">
+            <span class="key">${'ABCD'[pos]}</span>
+            <span>${fmt(q.options[oi])}</span>
+          </button>`).join('')}
+      </div>
+      <div id="verdict"></div>
+      <div class="qfoot">
+        <span class="hint">Keys: A–D or 1–4${hasTTS ? ' · R reads aloud' : ''}${S.mode === 'drill' ? ' · Enter for next' : ''}</span>
+        <span id="nextSlot"></span>
+      </div>
+    </div>
+  `;
+  document.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => pick(+b.dataset.pos)));
+  const lb = document.getElementById('listenBtn');
+  if (lb) lb.addEventListener('click', speakCurrent);
+  window.scrollTo(0, 0);
+  if (S.current.picked != null) reveal(q, order, S.current.picked, false);
+  else if (hasTTS && audioPrefs().auto) speak(questionSpeech(q, newScen));
+}
+
+function reveal(q, order, pos, speakNow) {
+  const ok = order[pos] === q.correct;
+  const correctPos = order.indexOf(q.correct);
+  document.querySelectorAll('.opt').forEach((b, i) => {
+    b.disabled = true;
+    if (i === correctPos) b.classList.add('right');
+    else if (i === pos) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  $('#verdict').innerHTML = verdictHTML(q, ok, correctPos);
+  wireStudyLinks($('#verdict'));
+  wireNotes($('#verdict'));
+  if (S.mode === 'review') {
+    $('#nextSlot').innerHTML = `<div class="grades"><span class="grade-hint">How well did you know it? (keys 1–4)</span><button class="grade again" data-g="again">Again</button><button class="grade hard" data-g="hard">Hard</button><button class="grade good" data-g="good">Good</button><button class="grade easy" data-g="easy">Easy</button></div>`;
+    document.querySelectorAll('.grade').forEach(b => b.addEventListener('click', () => gradeAndNext(q, b.dataset.g, ok)));
+    const sug = document.querySelector(ok ? '.grade.good' : '.grade.again'); if (sug) sug.focus();
+  } else {
+    $('#nextSlot').innerHTML = `<button class="ghost small" id="askBtn">🎤 Ask the tutor</button> <button class="primary" id="nextBtn">${S.idx + 1 < S.queue.length ? 'Next question' : 'See results'}</button>`;
+    $('#nextBtn').addEventListener('click', next);
+    $('#askBtn').addEventListener('click', () => openTutor({ kind: 'question', q }));
+    $('#nextBtn').focus();
+  }
+  if (speakNow && hasTTS && audioPrefs().auto) speak(verdictSpeech({ q, order, pos, ok }));
+}
+
+function resumeSession() {
+  if (!S.mode || S.done || !S.current) { home(); return; }
+  setTab('practice'); homeBtn.hidden = false;
+  paintQuestion(false);
+}
+
+function pick(pos) {
+  if (S.current.picked != null) return;
+  stopSpeak();
+  const { q, order } = S.current;
+  S.current.picked = pos;
+  const ok = order[pos] === q.correct;
+  S.answers.push({ q, order, pos, ok });
+  recordAnswer(q.id, ok);
+  if (S.mode === 'exam') { next(); return; }
+  reveal(q, order, pos, true);
+}
+
+function next() {
+  stopSpeak();
+  if (S.idx + 1 < S.queue.length) { S.idx++; renderQ(); }
+  else finish();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, select, textarea')) return;
+  const k = e.key.toUpperCase();
+  if (k === 'R' && hasTTS) {
+    if (S.current && !S.done) { e.preventDefault(); speakCurrent(); return; }
+    if (currentDoc) { e.preventDefault(); speakDocFrom(0); return; }
+  }
+  if (!S.mode || S.done || !S.current) return;
+  if (S.mode === 'review' && S.current.picked != null) {
+    const g = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy', ' ': 'good' }[e.key];
+    if (g) { e.preventDefault(); gradeAndNext(S.current.q, g, S.answers[S.answers.length - 1].ok); }
+    return;
+  }
+  const map = { A: 0, B: 1, C: 2, D: 3, 1: 0, 2: 1, 3: 2, 4: 3 };
+  if (k in map && S.current.picked == null) { e.preventDefault(); pick(map[k]); }
+  else if (e.key === 'Enter' && S.mode === 'drill' && S.current.picked != null) {
+    const btn = $('#nextBtn'); if (btn && document.activeElement !== btn) { e.preventDefault(); next(); }
+  }
+});
+
+/* ---------- results ---------- */
+function finish() {
+  if (S.mode === 'review') { finishReview(); return; }
+  stopTimer(); stopSpeak(); S.done = true; homeBtn.hidden = true;
+  const total = S.answers.length;
+  const right = S.answers.filter(a => a.ok).length;
+  const pct = total ? Math.round(100 * right / total) : 0;
+  const pass = pct >= PASS_PCT;
+  if (S.mode === 'exam' && total === S.queue.length) recordExam(pct);
+
+  const byDom = {}, byScen = {};
+  for (const a of S.answers) {
+    const d = byDom[a.q.domain] = byDom[a.q.domain] || { r: 0, t: 0 };
+    d.t++; if (a.ok) d.r++;
+    const s = byScen[a.q.id.split('-')[0]] = byScen[a.q.id.split('-')[0]] || { r: 0, t: 0 };
+    s.t++; if (a.ok) s.r++;
+  }
+  const misses = S.answers.filter(a => !a.ok);
+
+  app.innerHTML = `
+    <div class="card score-hero">
+      <div class="eyebrow">${S.mode === 'exam' ? 'Exam simulation' : 'Drill'} complete</div>
+      <div class="big">${pct}<small>%</small></div>
+      <div>${right} of ${total} correct</div>
+      <span class="badge ${pass ? 'pass' : 'fail'}">${pass ? 'On pass pace' : 'Below pass line'}</span>
+      <div class="passnote">Real exam passes at 720/1000 scaled — roughly ${PASS_PCT}% is the working target.</div>
+    </div>
+
+    <div class="section-label">By domain</div>
+    <div class="card bars">
+      ${Object.keys(byDom).sort().map(d => bar('D' + d + ' · ' + DOMAINS[d].name, byDom[d])).join('')}
+    </div>
+
+    ${Object.keys(byScen).length > 1 ? `
+    <div class="section-label">By scenario</div>
+    <div class="card bars">
+      ${Object.keys(byScen).sort().map(s => bar(SCENARIOS[s], byScen[s])).join('')}
+    </div>` : ''}
+
+    ${misses.length ? `
+    <div class="section-label">Review your ${misses.length} miss${misses.length > 1 ? 'es' : ''}</div>
+    ${misses.map(a => {
+      const corrPos = a.order.indexOf(a.q.correct);
+      return `<details class="miss">
+        <summary>${fmt(a.q.stem)}</summary>
+        <div class="body">
+          <p class="yourpick"><b>Your answer:</b> ${fmt(a.q.options[a.order[a.pos]])}</p>
+          <p class="rightpick"><b>Correct (${'ABCD'[corrPos]}):</b> ${fmt(a.q.options[a.q.correct])}</p>
+          <p>${fmt(a.q.explanation)}</p>
+          ${a.q.rule ? `<div class="rule"><b>The rule</b>${fmt(a.q.rule)}</div>` : ''}
+          <div class="study"><div class="study-lbl">Where to study this</div>${(STUDYMAP[a.q.id] || {}).focus ? `<p class="study-focus">${esc(STUDYMAP[a.q.id].focus)}</p>` : ''}<div class="slinks">${studyLinksHTML(a.q)}</div></div>
+          <label class="note-lbl">Your note<textarea class="note" data-qid="${a.q.id}" rows="2" placeholder="A memory hook, why you missed it…">${esc(getNote(a.q.id))}</textarea></label>
+          <p class="hint">${SCENARIOS[a.q.id.split('-')[0]]} · D${a.q.domain} ${DOMAINS[a.q.domain].name}</p>
+        </div>
+      </details>`;
+    }).join('')}` : `<p class="sub" style="margin-top:20px">Clean sheet. Go take the real practice test.</p>`}
+
+    <div class="actions">
+      <button class="primary" id="againBtn">${S.mode === 'exam' ? 'New exam sim' : 'Drill again'}</button>
+      ${misses.length ? '<button class="ghost" id="missBtn">Drill these misses now</button>' : ''}
+      <button class="ghost" id="backBtn">Practice home</button>
+    </div>
+  `;
+  $('#againBtn').addEventListener('click', () => S.mode === 'exam' ? startExam() : begin({ mode: 'drill', queue: shuffle(S.queue) }));
+  $('#backBtn').addEventListener('click', home);
+  const mb = $('#missBtn');
+  if (mb) mb.addEventListener('click', () => begin({ mode: 'drill', queue: shuffle(misses.map(a => a.q)) }));
+  wireStudyLinks(app); wireNotes(app);
+  window.scrollTo(0, 0);
+}
+
+function bar(label, e) {
+  const p = Math.round(100 * e.r / e.t);
+  return `<div class="bar-row">
+    <span>${label}</span>
+    <span class="track"><span class="fill ${p < PASS_PCT ? 'lowacc' : ''}" style="width:${p}%"></span></span>
+    <span class="num">${e.r}/${e.t} · ${p}%</span>
+  </div>`;
+}
+
+function showProgress() {
+  setTab('progress'); currentDoc = null; stopSpeak(); S = {}; homeBtn.hidden = true;
+  const st = loadStats(); const Q = st.q || {};
+  const status = { new: 0, learning: 0, young: 0, mature: 0 };
+  let due = 0;
+  for (const q of BANK.questions) { status[cardStatus(q.id)]++; if (isDue(q.id)) due++; }
+  const total = BANK.questions.length;
+  const right = Object.values(Q).reduce((n, e) => n + (e.r || 0), 0);
+  const totAns = Object.values(Q).reduce((n, e) => n + (e.r || 0) + (e.w || 0), 0);
+  const acc = totAns ? Math.round(100 * right / totAns) : null;
+
+  const agg = (keyFn) => {
+    const m = {};
+    for (const q of BANK.questions) {
+      const k = keyFn(q); const e = m[k] = m[k] || { r: 0, w: 0, mature: 0, n: 0 };
+      const c = Q[q.id]; e.n++;
+      if (c) { e.r += c.r || 0; e.w += c.w || 0; }
+      if (cardStatus(q.id) === 'mature') e.mature++;
+    }
+    return m;
+  };
+  const byDom = agg(q => q.domain), byScen = agg(q => q.id.split('-')[0]);
+  const accOf = e => (e.r + e.w) ? Math.round(100 * e.r / (e.r + e.w)) : null;
+
+  const row = (label, docId, e) => {
+    const a = accOf(e);
+    return `<div class="bar-row"><span><a class="slink" data-doc="${docId}">${label}</a></span>
+      <span class="track"><span class="fill ${a != null && a < PASS_PCT ? 'lowacc' : ''}" style="width:${a || 0}%"></span></span>
+      <span class="num">${a == null ? '—' : a + '%'} · ${e.mature}/${e.n}</span></div>`;
+  };
+
+  const seenDoms = Object.keys(DOMAINS).filter(d => accOf(byDom[d]) != null).sort((x, y) => accOf(byDom[x]) - accOf(byDom[y]));
+  const focusDoms = seenDoms.slice(0, 2);
+  const misses = BANK.questions.filter(q => Q[q.id] && Q[q.id].last === 'w');
+
+  app.innerHTML = `
+    <div class="eyebrow">Claude Certified Architect — Foundations</div>
+    <h1>Progress</h1>
+    <p class="sub">Your mastery, what's due, and exactly where to study each weak spot. Every bar and link opens the matching study doc.</p>
+
+    <div class="tiles">
+      <div class="tile ${due ? 'hot' : ''}"><b>${due}</b><span>due now</span></div>
+      <div class="tile"><b>${status.mature}/${total}</b><span>mastered</span></div>
+      <div class="tile"><b>${status.learning + status.young}</b><span>learning</span></div>
+      <div class="tile"><b>${status.new}</b><span>not started</span></div>
+      <div class="tile"><b>${acc == null ? '—' : acc + '%'}</b><span>lifetime accuracy</span></div>
+      <div class="tile"><b>${st.bestExam != null ? st.bestExam + '%' : '—'}</b><span>best exam sim</span></div>
+    </div>
+
+    ${due ? `<button class="review-banner" id="progReview"><div class="rb-main"><h2>Review now</h2><p>Clear today's due cards before they pile up.</p></div><div class="rb-count"><b>${due}</b><span>due</span></div></button>` : ''}
+
+    <div class="section-label">Mastery by domain — weakest first</div>
+    <div class="card bars prog">${Object.keys(DOMAINS).sort((x, y) => (accOf(byDom[x]) == null ? 999 : accOf(byDom[x])) - (accOf(byDom[y]) == null ? 999 : accOf(byDom[y]))).map(d => row(`D${d} · ${DOMAINS[d].name} <em class="wt">${DOMAINS[d].w}</em>`, DOMAIN_DOC[d], byDom[d])).join('')}</div>
+
+    <div class="section-label">Mastery by scenario</div>
+    <div class="card bars prog">${Object.keys(SCENARIOS).map(s => row(SCENARIOS[s], SCEN_DOC[s], byScen[s])).join('')}</div>
+
+    ${focusDoms.length ? `<div class="section-label">Study next</div>${focusDoms.map(d => {
+      const princ = {};
+      misses.filter(q => q.domain == d).forEach(q => ((STUDYMAP[q.id] || {}).principles || []).forEach(p => princ[p.id] = p.title));
+      const pLinks = Object.keys(princ).map(id => `<a class="slink" data-doc="${START_DOC}" data-anchor="${id}.">Start Here · ${id}</a>`).join('');
+      return `<div class="focus-card">
+        <h3>D${d} · ${DOMAINS[d].name} — ${accOf(byDom[d])}% (${DOMAINS[d].w} of the exam)</h3>
+        <p>Read the domain playbook${pLinks ? ', then the principles behind the ones you missed' : ''}. Then drill it back up.</p>
+        <div class="slinks"><a class="slink" data-doc="${DOMAIN_DOC[d]}">D${d} playbook</a>${pLinks}</div>
+      </div>`;
+    }).join('')}` : ''}
+
+    ${misses.length ? `<div class="section-label">Missed questions (${misses.length})</div>
+      ${misses.map(q => missDetailHTML(q)).join('')}
+      <div class="actions"><button class="primary" id="drillMiss">Drill these ${misses.length}</button></div>`
+      : `<p class="sub" style="margin-top:20px">No misses on record yet — drill or review to start filling this in.</p>`}
+
+    <div class="actions" style="margin-top:26px">
+      <button class="ghost" id="toPractice">← Practice</button>
+      <button class="ghost" id="toStudy">Study docs</button>
+    </div>`;
+  wireStudyLinks(app); wireNotes(app);
+  const pr = $('#progReview'); if (pr) pr.addEventListener('click', startReview);
+  const dm = $('#drillMiss'); if (dm) dm.addEventListener('click', () => begin({ mode: 'drill', queue: shuffle(misses.slice()) }));
+  $('#toPractice').addEventListener('click', home);
+  $('#toStudy').addEventListener('click', showStudy);
+  window.scrollTo(0, 0);
+}
+
+applyDisplay();
+initTutor();
+showStudy();
+</script>

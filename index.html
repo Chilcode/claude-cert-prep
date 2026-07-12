@@ -308,7 +308,7 @@ function applyDisplay() {
   r.style.setProperty('--serif', f.serif);
   r.style.setProperty('--sans', f.sans);
   r.setAttribute('data-spacing', f.spacing ? 'on' : 'off');
-  if (document.body) document.body.style.zoom = String(p.scale || 1);
+  r.style.setProperty('--fscale', String(p.scale || 1));
 }
 
 const DOMAINS = {
@@ -879,6 +879,10 @@ async function submitTutor(question) {
       throw new Error(msg);
     }
     const j = await res.json();
+    if (j.usage) {
+      const u = j.usage;
+      console.log(`[tutor cache] cache_read_input_tokens=${u.cache_read_input_tokens || 0} cache_creation_input_tokens=${u.cache_creation_input_tokens || 0} input_tokens=${u.input_tokens || 0}`);
+    }
     const text = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').trim() || 'Sorry — I did not catch that. Try asking again.';
     TUTOR.messages.push({ role: 'assistant', content: text });
     renderTutorThread();
@@ -1164,7 +1168,7 @@ function startReview() {
   const seen = due.filter(q => { const c = cardOf(q.id); return c && (c.r + c.w) > 0; })
                   .sort((a, b) => ((cardOf(a.id).sr || {}).due || 0) - ((cardOf(b.id).sr || {}).due || 0));
   const fresh = due.filter(q => { const c = cardOf(q.id); return !c || (c.r + c.w) === 0; });
-  const queue = [...seen, ...fresh].slice(0, 30);
+  const queue = shuffle([...seen, ...fresh].slice(0, 30));
   if (!queue.length) { alert('Nothing due right now — you\'re caught up. Come back later, or use Drill to grind extra questions.'); return; }
   begin({ mode: 'review', queue });
 }
