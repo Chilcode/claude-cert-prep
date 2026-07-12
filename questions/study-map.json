@@ -1,0 +1,366 @@
+{
+  "s1-q1": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" },
+      { "id": "D5", "title": "Named anti-patterns (the guide lists these explicitly)" }
+    ],
+    "focus": "Review how loop termination must ride the deterministic stop_reason signal (continue on 'tool_use', stop on 'end_turn') rather than the probabilistic 'CASE CLOSED' text sentinel or an iteration cap, which are the named anti-patterns truncating and over-running the support loop."
+  },
+  "s1-q2": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" }
+    ],
+    "focus": "Review how a $500 refund cap with financial consequences demands a deterministic interception hook that blocks the over-limit call and redirects to escalation, not temperature-0 tricks or all-caps prompt rules the audit already proved probabilistic."
+  },
+  "s1-q3": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how the actual defect is the agent resolving only one of three stated issues, so the fix is the decompose-investigate-synthesize pattern on shared context, not over-engineered per-issue subagents or a burden-shifting one-issue intake form."
+  },
+  "s1-q4": {
+    "principles": [
+      { "id": "P6", "title": "Explicit criteria and concrete examples beat vague instructions — every time" }
+    ],
+    "focus": "Review how a complete escalation handoff comes from requiring explicit structured fields (customer ID, root cause, refund amount, recommended action) in the tool schema, not a vague 'provide helpful context' prompt or a raw transcript dump."
+  },
+  "s1-q5": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how the root cause is a uniform 'Operation failed' string, fixed by structured error metadata (errorCategory 'business', retriable:false, a readable policy message) so the agent stops retrying a legitimate denial and can explain the 30-day window."
+  },
+  "s1-q6": {
+    "principles": [
+      { "id": "P5", "title": "Least privilege and separation of concerns — scope everything to its role" }
+    ],
+    "focus": "Review how scoping the agent to the 4-5 tools its role needs fixes the 19-tool selection degradation, since least privilege beats expanding already-detailed descriptions or bolting on a keyword routing layer."
+  },
+  "s1-q7": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how, with tool descriptions already fixed, the remaining root cause is the system prompt's keyword-sensitive 'getting to know the customer' wording pulling the model toward get_customer, so you edit that phrase rather than re-solving descriptions."
+  },
+  "s1-q8": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how transactional facts (the $84.50 and $119.99 amounts and the turn-3 store-credit refusal) must live in a persistent case-facts block outside summarization, since the defect is lossy summarization, not context-window capacity."
+  },
+  "s1-q9": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how an explicit 'I want to talk to a human' is a first-class escalation trigger to honor immediately, so the fix is escalating without investigating first, not sentiment thresholds or self-reported confidence proxies."
+  },
+  "s1-q10": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how three matches for 'M. Garcia' require asking the customer for an additional identifier rather than any heuristic selection, whether that heuristic sits in the prompt, inside the tool, or in a trained ML model."
+  },
+  "s2-q1": {
+    "principles": [
+      { "id": "P5", "title": "Least privilege and separation of concerns — scope everything to its role" }
+    ],
+    "focus": "Review how team standards belong in the version-controlled project CLAUDE.md, since the root cause is that they live in your user-level ~/.claude/CLAUDE.md that never travels through a repo clone."
+  },
+  "s2-q2": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how the skill's 15,000-token dump is isolated with context: fork so only its summary returns, since the problem is verbose output degrading attention, not a too-small window."
+  },
+  "s2-q3": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" }
+    ],
+    "focus": "Review how preventing a destructive 'git checkout .' during skill execution requires the deterministic allowed-tools frontmatter restriction, because prompt guidance has a non-zero failure rate and the failure destroys uncommitted work."
+  },
+  "s2-q4": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how the defect is a blanket plan-mode mandate adding overhead to simple single-file fixes, so you match execution mode to task scope rather than auto-approving small plans or routing every task through Explore."
+  },
+  "s2-q5": {
+    "principles": [
+      { "id": "P5", "title": "Least privilege and separation of concerns — scope everything to its role" }
+    ],
+    "focus": "Review how each package's CLAUDE.md should @import only its relevant standards, scoping context to where it applies instead of a monolithic root file that bloats context and applies frontend conventions to database code."
+  },
+  "s2-q6": {
+    "principles": [
+      { "id": "P2", "title": "\"Most effective FIRST step\" = lowest effort, highest leverage, at the root cause" }
+    ],
+    "focus": "Review how the cheapest, highest-leverage first step for a convention applying inconsistently across sessions is running /memory to see which memory files actually load, before rewriting the wording or duplicating it everywhere."
+  },
+  "s2-q7": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how four-hour context degradation is countered with scratchpad files, scoped subagent delegation, and /compact, since the failure is attention quality, not the size of the context window."
+  },
+  "s2-q8": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how broadly stale tool results (most of the module rewritten by a merge) call for a fresh session with an injected structured summary, not resuming and patching over a majority-invalid analysis."
+  },
+  "s2-q9": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how evaluating two refactoring strategies from one 45-minute analysis calls for fork_session's independent branches off a shared baseline, since subagents don't inherit context and re-analyzing twice would pay for it twice."
+  },
+  "s2-q10": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how crash recovery for a multi-phase overnight run comes from each phase exporting a structured manifest to a known location that the coordinator reloads on resume, not conversation history that dies with the process."
+  },
+  "s3-q1": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" },
+      { "id": "D5", "title": "Named anti-patterns (the guide lists these explicitly)" }
+    ],
+    "focus": "Review how the research loop must terminate on the deterministic stop_reason 'end_turn' rather than a 'RESEARCH COMPLETE' sentinel or a 25-iteration cap, the named anti-patterns behind the paraphrases and mid-run emissions."
+  },
+  "s3-q2": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how independent subtopics run concurrently by emitting multiple Task tool calls in a single coordinator response, fixing the one-call-per-turn sequential spawning rather than a nonexistent parallel_tasks flag or four separate coordinators."
+  },
+  "s3-q3": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how subagents have isolated context, so the synthesis agent hallucinated because its prompt carried no findings; the fix is passing the complete structured findings explicitly, not a nonexistent inheritance flag or a shared vector store."
+  },
+  "s3-q4": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" }
+    ],
+    "focus": "Review how a hard temporal-ordering requirement across Unix, ISO 8601, and MM/DD/YYYY formats needs a deterministic PostToolUse hook normalizing dates before the model sees them, since prompting only plateaued at a 4% error rate."
+  },
+  "s3-q5": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how exposing the corpus catalog as an MCP resource eliminates the 5-7 exploratory search_documents calls, using the resources-for-content vs tools-for-actions split rather than a list tool that still burns calls or a bigger budget."
+  },
+  "s3-q6": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" }
+    ],
+    "focus": "Review how tool_choice 'any' deterministically guarantees the subagent returns a tool call while still letting it pick the right tool, fixing the 7% conversational-text failures that a prompt instruction cannot."
+  },
+  "s3-q7": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how, with descriptions already enriched, the residual PDF misrouting traces to the near-identical analyze_content/analyze_document names, so renaming to eliminate the overlap is the fix, not more few-shot examples or a pre-router."
+  },
+  "s3-q8": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how citation integrity is destroyed upstream once findings become prose, so the fix is structured claim-source mappings emitted at the source and preserved through every hop, not prompt pressure or post-hoc re-searching that launders the hallucination."
+  },
+  "s3-q9": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how the dropped second/third/fourth subagent findings are the lost-in-the-middle position effect, fixed by a key-findings summary up front plus section headers, not a larger window or consensus voting that suppresses intermittent findings."
+  },
+  "s3-q10": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how a five-hour research run recovers by having each agent export structured state that the coordinator reloads from a manifest on resume, so completed paid calls are never re-run, unlike restart-from-zero or trusting session history."
+  },
+  "s4-q1": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" },
+      { "id": "D5", "title": "Named anti-patterns (the guide lists these explicitly)" }
+    ],
+    "focus": "Review how the exploration loop must key off stop_reason ('tool_use' vs 'end_turn') rather than checking for a text block or a TASK_COMPLETE marker, since Claude routinely narrates its plan alongside tool_use blocks."
+  },
+  "s4-q2": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how the boilerplate subagent ignored the conventions because Task subagents inherit nothing, so the catalogued conventions and example snippets must go directly in its prompt, not via a nonexistent inheritance option or re-discovery tools."
+  },
+  "s4-q3": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" }
+    ],
+    "focus": "Review how heterogeneous timestamp and status-code formats need a deterministic PostToolUse hook normalizing every tool result before the model reasons over it, since prompting still leaves an 8% incident-ordering error rate."
+  },
+  "s4-q4": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how narrow staleness (2 of ~40 files refactored) calls for resuming and naming exactly which files changed for targeted re-analysis, preserving the still-valid 95% rather than re-exploring everything or forking the same stale baseline."
+  },
+  "s4-q5": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how the /map-module skill's thousands of intermediate lines are kept out of the session with context: fork, since the failure is context pollution and exhaustion, not tool safety or a missing /compact step."
+  },
+  "s4-q6": {
+    "principles": [
+      { "id": "P5", "title": "Least privilege and separation of concerns — scope everything to its role" }
+    ],
+    "focus": "Review how standards that work for you but not a fresh clone sit in your user-level ~/.claude/CLAUDE.md, so you run /memory to confirm what loads and move them into project scope."
+  },
+  "s4-q7": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how verbose discovery output crowding out later phases is fixed by delegating discovery to the Explore subagent so only summaries enter the main session, not a bigger window or reading every file upfront."
+  },
+  "s4-q8": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how publishing the documentation hierarchy as MCP resources eliminates the 5-8 exploratory search_docs probes, since a catalog is consultable content, unlike a list_all_documents tool that still spends a call every task."
+  },
+  "s4-q9": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how a bare 'Operation failed' string is the root cause, fixed with structured isError metadata (errorCategory transient vs permission, isRetryable) so the agent retries the nightly index rebuild but immediately stops on permission failures."
+  },
+  "s4-q10": {
+    "principles": [
+      { "id": "P5", "title": "Least privilege and separation of concerns — scope everything to its role" }
+    ],
+    "focus": "Review how a team-shared MCP server belongs in project-scoped .mcp.json with ${GITHUB_TOKEN} env-var expansion, fixing both the distribution gap and the leaked hardcoded token that the personal ~/.claude.json caused."
+  },
+  "s5-q1": {
+    "principles": [
+      { "id": "P5", "title": "Least privilege and separation of concerns — scope everything to its role" }
+    ],
+    "focus": "Review how criteria that work on your laptop but fail in CI and on a fresh clone live in the non-version-controlled ~/.claude/CLAUDE.md, so you move them to project CLAUDE.md and verify loading with /memory."
+  },
+  "s5-q2": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how stateless CI re-reviews repost fixed issues because each run has no memory of the last, fixed by feeding prior findings into context with an only-new-or-unaddressed instruction, not downstream string-match dedup or a stale --resume."
+  },
+  "s5-q3": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" },
+      { "id": "P6", "title": "Explicit criteria and concrete examples beat vague instructions — every time" }
+    ],
+    "focus": "Review how the duplicate and trivial test suggestions are missing-context failures, fixed by putting the existing test files in the prompt and documenting valuable-test criteria and fixtures in CLAUDE.md, which the model cannot honor if it cannot see them."
+  },
+  "s5-q4": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" }
+    ],
+    "focus": "Review how machine-parseable CI findings require --output-format json with --json-schema as a deterministic guarantee, rather than a prompt 'respond only with JSON' that fails 8% of runs on a blocking pipeline."
+  },
+  "s5-q5": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how a session that wrote the code retains its generation reasoning and won't question itself, so review must run in a fresh independent instance, not via an adversarial-persona prompt, extended thinking, or triple self-review."
+  },
+  "s5-q6": {
+    "principles": [
+      { "id": "P6", "title": "Explicit criteria and concrete examples beat vague instructions — every time" }
+    ],
+    "focus": "Review how vague 'flag anything concerning' error-handling instructions cause 45% false positives, fixed by explicit categorical report/skip criteria (report payment-path swallowed exceptions, skip codebase-consistent patterns), not 'be conservative' or confidence suppression."
+  },
+  "s5-q7": {
+    "principles": [
+      { "id": "P6", "title": "Explicit criteria and concrete examples beat vague instructions — every time" }
+    ],
+    "focus": "Review how consistently formatted findings come from 2-4 concrete few-shot examples of the exact format when detailed instructions alone still yield 30% malformed output, not more prose rules or a lower temperature."
+  },
+  "s5-q8": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how one high-false-positive documentation category is eroding trust in the >90%-precision security and bug categories, so you temporarily disable that one category while rewriting it, not apply a global threshold or relabel the noise as minor."
+  },
+  "s5-q9": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how a strict schema guarantees syntax but not semantics, so wrong-line and contradicting-severity findings need programmatic validation plus retry-with-error-feedback, not tighter schema constraints or forcing tool_choice."
+  },
+  "s5-q10": {
+    "principles": [
+      { "id": "P4", "title": "Match the API to latency and blocking requirements" }
+    ],
+    "focus": "Review how Message Batches failures are handled per custom_id by chunking the oversized modules and resubmitting only the 48 failures, keeping the 50% batch savings rather than re-running all 400 or escalating to a synchronous higher-tier model."
+  },
+  "s6-q1": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how a required po_number field the invoice lacks structurally forces fabrication, fixed by making the field nullable with a return-null instruction, not a 'never guess' prompt, a verification pass, or misattributed schema strict mode."
+  },
+  "s6-q2": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" }
+    ],
+    "focus": "Review how guaranteed schema-compliant JSON comes from tool use with the schema as input_schema (forced via tool_choice), eliminating fences and preambles by construction, not a repair layer, prompt-plus-retry, or a nonexistent output_format flag."
+  },
+  "s6-q3": {
+    "principles": [
+      { "id": "P3", "title": "When money, compliance, or ordering is at stake → deterministic enforcement, never prompts" }
+    ],
+    "focus": "Review how an unknown document type across three extraction tools calls for tool_choice 'any' to guarantee a tool call while the model picks the matching schema, not forcing record_invoice or a probabilistic 'always call a tool' prompt."
+  },
+  "s6-q4": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how line items that don't sum and swapped bill-to/ship-to fields are schema-valid semantic errors, fixed with code-level cross-field validation plus retry-with-error-feedback, not tighter schema types or a higher-tier model."
+  },
+  "s6-q5": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how retries can't produce a PO number absent from a receipt, so you classify failures first (make po_number nullable to short-circuit absent cases to null) and reserve retries for format and structural errors."
+  },
+  "s6-q6": {
+    "principles": [
+      { "id": "P4", "title": "Match the API to latency and blocking requirements" }
+    ],
+    "focus": "Review how batch failures are resubmitted only by failed custom_id, chunking oversized contracts and sending validation failures as new requests, since a batch request can't run an in-flight multi-turn retry loop and migrating to synchronous forfeits the savings."
+  },
+  "s6-q7": {
+    "principles": [
+      { "id": "P2", "title": "\"Most effective FIRST step\" = lowest effort, highest leverage, at the root cause" }
+    ],
+    "focus": "Review how the cheapest, highest-leverage first step before cutting review is segmenting the 96.5% aggregate by document type and field, since aggregate accuracy masks a segment running far below target, unlike a trained error-detection classifier."
+  },
+  "s6-q8": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how clauses on pages 30-50 coming back null is the lost-in-the-middle position effect, fixed by chunking into per-section passes with summary-first placement and section headers, not a larger window or a 'read carefully' prompt."
+  },
+  "s6-q9": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how confidence that's overconfident on invoice_date and underconfident on vendor_name can't work under one raw cutoff, so you calibrate per-field thresholds against a labeled validation set rather than trusting self-reported scores."
+  },
+  "s6-q10": {
+    "principles": [
+      { "id": "P1", "title": "Fix the root cause the evidence points at — not a symptom, not a neighbor" }
+    ],
+    "focus": "Review how a silent layout-change error in the automated lane is caught early by ongoing stratified random sampling of high-confidence extractions, not dual-extraction agreement that repeats the same misread or a raised confidence threshold."
+  }
+}
