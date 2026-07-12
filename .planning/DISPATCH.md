@@ -10,7 +10,7 @@
 | Agent | Task | Model | Owns (writes) | State |
 |-------|------|-------|---------------|-------|
 | **AGENT-1** | Learning-science spec + rebuild the Study System spreadsheet | Sonnet 5 | `.planning/SUPERLEARN-SPEC.md`, new `.xlsx` | ✅ DONE — spec approved + written, spreadsheet built. AGENT-3 still needs orchestrator to flip its own BLOCKED gate |
-| **AGENT-2** | De-scratchpad build + size/zoom fix + review shuffle + tutor prompt-caching | Sonnet 5 | `build/quiz-template.html`, `build/build_hub.py`, `index.html` | 🟢 MERGED — committed `0e1a0b6`; 3 fixes verified in deployed index.html. **Push to live Pages held** pending David's in-browser check of the size fix. |
+| **AGENT-2** | De-scratchpad build + size/zoom fix + review shuffle + tutor prompt-caching | Sonnet 5 | `build/quiz-template.html`, `build/build_hub.py`, `index.html` | ✅ SHIPPED — committed `0e1a0b6`, pushed to live Pages (David approved). 3 fixes verified in deployed index.html. |
 | **AGENT-3** | 7-phase "Learning Path" scaffold + Phase-5 loading-strategy scheduler | Sonnet 5 | `build/quiz-template.html` | 🟢 READY — gates cleared (spec APPROVED + AGENT-2 merged). Launch when David is ready. |
 | **AGENT-4** | Teach-back / Feynman "explain *why*" mode | Sonnet 5 | `build/quiz-template.html` | 🔴 BLOCKED — needs AGENT-2 merged; serialize *after* AGENT-3 (same file) |
 
@@ -93,6 +93,7 @@ Sonnet 5 / Opus 4.8 have **1M-token** windows, so this should be rare — but if
 - 2026-07-12 — AGENT-1 spec + `learning-system.xlsx` reviewed & committed (`cae3ec9`). Flagged to David: the Phase-1 mastery-direction inversion (spec §1).
 - 2026-07-12 — AGENT-2 committed (`0e1a0b6`): rescued source-of-truth now version-controlled; all 3 fixes verified present in deployed `index.html`. **Push to GitHub Pages held** pending David's in-browser check of the size fix (Firefox — original bug was CSS `zoom`, unsupported there).
 - 2026-07-12 — AGENT-3 gates cleared (spec APPROVED + AGENT-2 merged) → flipped to READY. AGENT-4 stays BLOCKED (runs after AGENT-3; same file).
+- 2026-07-12 — David approved → pushed AGENT-1 + AGENT-2 + board to GitHub `main`. Live Pages now carries the 3 fixes.
 
 ---
 
