@@ -22,7 +22,9 @@ Everything in one navigable app — works on your phone:
 
 - **Study tab** — all 14 docs rendered in the browser with **read-aloud**: open a doc, hit "Listen to this doc" and it reads while highlighting and scrolling each paragraph so you can follow along. Double-click any paragraph to start listening from there. `R` restarts.
 - **Practice tab** — **Drill** (filter by scenario/domain, instant feedback with the decision rule behind every answer, "missed only" replay) and **Exam simulation** (4 random scenarios × 10 questions, 80-minute clock, answer-to-advance like the real platform, per-domain scorecard). Every question, its options, and its explanation can be read aloud — turn on "Read questions aloud automatically" in Audio settings, or press `R` on any question. Answer positions shuffle every run; stats persist in the browser.
-- **Voices**: it uses your system voices. For the best quality open the site in **Microsoft Edge** (desktop or Android) and pick a voice with "Natural" in the name.
+- **Voices**: two engines, switchable under Audio on the Practice tab.
+  - **System voices** (free, unlimited) — best quality in **Microsoft Edge** (desktop or Android): pick a voice with "Natural" in the name.
+  - **ElevenLabs** (your account) — paste your API key (stored only in your browser, never in this repo), hit "Load my voices," and the whole hub reads in your ElevenLabs voices. Audio is cached locally so re-listens are free; first listens cost credits (~500–700/question on Flash, 10–25K per full doc — use system voices for long docs). Works on the GitHub Pages site only; the claude.ai artifact copy blocks external APIs. Tip: create a TTS-restricted key in the ElevenLabs dashboard.
 
 **Real-exam tip:** the exam is online-proctored — before booking, ask the test provider about accessibility accommodations (screen reader support and/or extended time). Reading accommodations on a 60-question / 120-minute reading-heavy exam are exactly what those policies exist for.
 

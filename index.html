@@ -288,9 +288,154 @@ function chunk(text) {
   return parts;
 }
 
+/* ---------- ElevenLabs engine ---------- */
+function engine() { return audioPrefs().engine === 'el' ? 'el' : 'system'; }
+const EL = { audio: null, abort: null, urls: [] };
+const elSession = { chars: 0, cachedChars: 0 };
+
+let idbP = null;
+function idb() {
+  if (!('indexedDB' in window)) return Promise.resolve(null);
+  idbP = idbP || new Promise(res => {
+    const r = indexedDB.open('ccaf-el-cache', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('audio');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => res(null);
+  });
+  return idbP;
+}
+async function cacheGet(k) {
+  const db = await idb(); if (!db) return null;
+  return new Promise(res => {
+    try {
+      const t = db.transaction('audio').objectStore('audio').get(k);
+      t.onsuccess = () => res(t.result || null); t.onerror = () => res(null);
+    } catch { res(null); }
+  });
+}
+async function cachePut(k, buf) {
+  const db = await idb(); if (!db) return;
+  try { db.transaction('audio', 'readwrite').objectStore('audio').put(buf, k); } catch {}
+}
+async function sha(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].slice(0, 16).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function updateElStatus() {
+  const el = document.getElementById('elStatus'); if (!el) return;
+  const mult = (audioPrefs().elModel || 'eleven_flash_v2_5') === 'eleven_multilingual_v2' ? 1 : 0.5;
+  el.textContent = elSession.chars || elSession.cachedChars
+    ? `≈${Math.round(elSession.chars * mult).toLocaleString()} credits used this session · ${elSession.cachedChars.toLocaleString()} characters replayed free from cache`
+    : '';
+}
+function elError(e) {
+  console.error(e);
+  alert(e.message || 'ElevenLabs request failed.');
+}
+async function elLoadVoices() {
+  const keyEl = document.getElementById('elKey');
+  const key = keyEl ? keyEl.value.trim() : audioPrefs().elKey;
+  if (!key) { alert('Paste your ElevenLabs API key first.'); return; }
+  saveAudioPrefs({ ...audioPrefs(), elKey: key });
+  try {
+    const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': key } });
+    if (!res.ok) throw new Error('ElevenLabs error ' + res.status + (res.status === 401 ? ' — check the key' : ''));
+    const j = await res.json();
+    const sel = document.getElementById('elVoice');
+    if (sel) {
+      sel.innerHTML = j.voices.map(v =>
+        `<option value="${esc(v.voice_id)}" ${audioPrefs().elVoice === v.voice_id ? 'selected' : ''}>${esc(v.name)}${v.category === 'cloned' ? ' · cloned' : ''}</option>`
+      ).join('');
+      const chosen = sel.selectedOptions[0];
+      if (chosen) saveAudioPrefs({ ...audioPrefs(), elVoice: chosen.value, elVoiceName: chosen.textContent });
+    }
+    const st = document.getElementById('elStatus');
+    if (st) st.textContent = j.voices.length + ' voices loaded from your account.';
+  } catch (e) { elError(e); }
+}
+async function elTTS(text, signal) {
+  const p = audioPrefs();
+  if (!p.elKey) throw new Error('No ElevenLabs API key — set it under Audio on the Practice tab.');
+  if (!p.elVoice) throw new Error('No ElevenLabs voice selected — hit “Load my voices” under Audio on the Practice tab.');
+  const model = p.elModel || 'eleven_flash_v2_5';
+  const k = await sha(p.elVoice + '|' + model + '|' + text);
+  const hit = await cacheGet(k);
+  if (hit) { elSession.cachedChars += text.length; updateElStatus(); return hit; }
+  const res = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(p.elVoice) + '?output_format=mp3_44100_64', {
+    method: 'POST', signal,
+    headers: { 'xi-api-key': p.elKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, model_id: model }),
+  });
+  if (!res.ok) {
+    let msg = '';
+    try { const j = await res.json(); msg = (j.detail && (j.detail.message || j.detail.status)) || ''; } catch {}
+    throw new Error('ElevenLabs error ' + res.status + (msg ? ': ' + msg : res.status === 401 ? ' — check your API key' : ''));
+  }
+  const buf = await res.arrayBuffer();
+  elSession.chars += text.length; updateElStatus();
+  cachePut(k, buf);
+  return buf;
+}
+function playBuffer(buf) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
+    EL.urls.push(url);
+    const a = new Audio(url);
+    a.playbackRate = audioPrefs().rate || 1;
+    EL.audio = a;
+    a.onended = a.onerror = () => resolve();
+    a.play().catch(() => resolve());
+  });
+}
+function elCleanup() {
+  if (EL.abort) { EL.abort.abort(); EL.abort = null; }
+  if (EL.audio) { EL.audio.onended = EL.audio.onerror = null; EL.audio.pause(); EL.audio = null; }
+  EL.urls.forEach(u => URL.revokeObjectURL(u)); EL.urls = [];
+}
+async function elSpeak(text, onDone) {
+  elCleanup();
+  const tok = ++speakToken;
+  setListenBtn(true);
+  EL.abort = new AbortController();
+  try {
+    const buf = await elTTS(speakable(text), EL.abort.signal);
+    if (tok !== speakToken) return;
+    await playBuffer(buf);
+  } catch (e) { if (e.name !== 'AbortError') elError(e); }
+  if (tok === speakToken) { setListenBtn(false); if (onDone) onDone(); }
+}
+async function elDocFrom(startIdx) {
+  elCleanup();
+  if (hasTTS) speechSynthesis.cancel();
+  speakToken++;
+  const tok = ++docSpeakToken;
+  setDocBtn(true);
+  EL.abort = new AbortController();
+  const texts = docBlocks.map(el => speakable(blockText(el)).trim());
+  let pending = null;
+  try {
+    for (let i = startIdx; i < docBlocks.length; i++) {
+      if (tok !== docSpeakToken) return;
+      if (!texts[i]) continue;
+      const bufP = pending && pending.i === i ? pending.p : elTTS(texts[i], EL.abort.signal);
+      let j = i + 1; while (j < texts.length && !texts[j]) j++;
+      if (j < texts.length) { const pf = elTTS(texts[j], EL.abort.signal); pf.catch(() => {}); pending = { i: j, p: pf }; }
+      else pending = null;
+      const buf = await bufP;
+      if (tok !== docSpeakToken) return;
+      clearReading(); docBlocks[i].classList.add('reading');
+      docBlocks[i].scrollIntoView({ block: 'center' });
+      await playBuffer(buf);
+    }
+  } catch (e) { if (e.name !== 'AbortError') elError(e); }
+  if (tok === docSpeakToken) { clearReading(); setDocBtn(false); }
+}
+
 let speakToken = 0;
 function speak(text, onDone) {
+  if (engine() === 'el') { if (hasTTS) speechSynthesis.cancel(); elSpeak(text, onDone); return; }
   if (!hasTTS) return;
+  elCleanup();
   speechSynthesis.cancel();
   const myToken = ++speakToken;
   const rate = audioPrefs().rate || 1;
@@ -309,9 +454,9 @@ function speak(text, onDone) {
   }
 }
 function stopSpeak() {
-  if (!hasTTS) return;
   speakToken++; docSpeakToken++;
-  speechSynthesis.cancel();
+  if (hasTTS) speechSynthesis.cancel();
+  elCleanup();
   setListenBtn(false); setDocBtn(false); clearReading();
 }
 function setListenBtn(on) {
@@ -358,7 +503,9 @@ function blockText(el) {
   return el.textContent;
 }
 function speakDocFrom(startIdx) {
+  if (engine() === 'el') { clearReading(); elDocFrom(startIdx); return; }
   if (!hasTTS) return;
+  elCleanup();
   speakToken++; speechSynthesis.cancel(); clearReading();
   const tok = ++docSpeakToken;
   const rate = audioPrefs().rate || 1;
@@ -503,17 +650,37 @@ function home() {
 
     <fieldset>
       <legend>Audio</legend>
-      ${hasTTS ? `
       <div class="row" style="margin-top:0">
+        <label>Engine <select id="engineSel">
+          <option value="system" ${engine() === 'system' ? 'selected' : ''}>System voices (free)</option>
+          <option value="el" ${engine() === 'el' ? 'selected' : ''}>ElevenLabs (your account)</option>
+        </select></label>
         <label><input type="checkbox" id="ttsAuto" ${audioPrefs().auto ? 'checked' : ''}> Read questions aloud automatically</label>
-        <label>Voice <select id="ttsVoice"></select></label>
         <label>Speed <select id="ttsRate">
           ${[['0.85', 'Slower'], ['1', 'Normal'], ['1.15', 'Brisk'], ['1.3', 'Fast'], ['1.5', 'Faster']].map(([v, n]) => `<option value="${v}" ${String(audioPrefs().rate || 1) === v ? 'selected' : ''}>${n}</option>`).join('')}
         </select></label>
         <button class="ghost small" id="ttsTest">Test voice</button>
       </div>
-      <p class="audio-note">Voices come from your system. Best quality: open this page in Microsoft Edge and pick a “Natural” voice. R replays the current question.</p>
-      ` : '<p class="audio-note">This browser has no speech synthesis — use Edge or Chrome for read-aloud.</p>'}
+      <div id="sysPanel" ${engine() === 'el' ? 'hidden' : ''}>
+        ${hasTTS ? `
+        <div class="row">
+          <label>Voice <select id="ttsVoice"></select></label>
+        </div>
+        <p class="audio-note">System voices are free and unlimited. Best quality: open this page in Microsoft Edge and pick a “Natural” voice. R replays the current question.</p>
+        ` : '<p class="audio-note">This browser has no speech synthesis — use Edge or Chrome, or switch the engine to ElevenLabs.</p>'}
+      </div>
+      <div id="elPanel" ${engine() === 'el' ? '' : 'hidden'}>
+        <div class="row">
+          <label>API key <input type="password" id="elKey" placeholder="xi-…" value="${esc(audioPrefs().elKey || '')}" style="font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:6px;padding:4px 8px;width:180px"></label>
+          <button class="ghost small" id="elLoad">Load my voices</button>
+          <label>Voice <select id="elVoice">${audioPrefs().elVoiceName ? `<option value="${esc(audioPrefs().elVoice || '')}" selected>${esc(audioPrefs().elVoiceName)}</option>` : '<option value="">— load voices —</option>'}</select></label>
+          <label>Model <select id="elModel">
+            ${[['eleven_flash_v2_5', 'Flash — cheapest + fastest'], ['eleven_turbo_v2_5', 'Turbo — balanced'], ['eleven_multilingual_v2', 'Multilingual — best quality, 2× cost']].map(([v, n]) => `<option value="${v}" ${(audioPrefs().elModel || 'eleven_flash_v2_5') === v ? 'selected' : ''}>${n}</option>`).join('')}
+          </select></label>
+        </div>
+        <p class="audio-note" id="elStatus"></p>
+        <p class="audio-note">Your key stays in this browser (localStorage) and is sent only to ElevenLabs — it is never in the site or repo. Tip: create a key restricted to Text-to-Speech in your ElevenLabs dashboard. Audio is cached locally, so re-listening to a question is free; first listen costs roughly 500–700 credits per question on Flash, and a full study doc runs 10–25K — use system voices for long docs unless you have credits to burn. ElevenLabs works on the GitHub Pages site; the claude.ai artifact copy blocks outside APIs.</p>
+      </div>
     </fieldset>
 
     ${total ? `<div class="statline">
@@ -525,13 +692,25 @@ function home() {
   `;
   $('#drillGo').addEventListener('click', startDrill);
   $('#examGo').addEventListener('click', startExam);
-  if (hasTTS) {
-    populateVoiceSel();
-    $('#ttsAuto').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), auto: e.target.checked }));
-    $('#ttsRate').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), rate: +e.target.value }));
-    $('#ttsVoice').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), voice: e.target.value }));
-    $('#ttsTest').addEventListener('click', () => speak('Block process_refund until get_customer returns a verified customer ID. That is the sound of a passing score.'));
-  }
+  if (hasTTS) populateVoiceSel();
+  const tv = $('#ttsVoice');
+  if (tv) tv.addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), voice: e.target.value }));
+  $('#ttsAuto').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), auto: e.target.checked }));
+  $('#ttsRate').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), rate: +e.target.value }));
+  $('#ttsTest').addEventListener('click', () => speak('Block process_refund until get_customer returns a verified customer ID. That is the sound of a passing score.'));
+  $('#engineSel').addEventListener('change', e => {
+    saveAudioPrefs({ ...audioPrefs(), engine: e.target.value });
+    $('#sysPanel').hidden = e.target.value === 'el';
+    $('#elPanel').hidden = e.target.value !== 'el';
+  });
+  $('#elKey').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), elKey: e.target.value.trim() }));
+  $('#elLoad').addEventListener('click', elLoadVoices);
+  $('#elVoice').addEventListener('change', e => {
+    const name = e.target.selectedOptions[0] ? e.target.selectedOptions[0].textContent : '';
+    saveAudioPrefs({ ...audioPrefs(), elVoice: e.target.value, elVoiceName: name });
+  });
+  $('#elModel').addEventListener('change', e => saveAudioPrefs({ ...audioPrefs(), elModel: e.target.value }));
+  updateElStatus();
   window.scrollTo(0, 0);
 }
 
