@@ -266,6 +266,8 @@
   .tmsg .who { display: block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-bottom: 3px; }
   .tmsg.user { align-self: flex-end; background: var(--accent-bg); border: 1px solid var(--accent); }
   .tmsg.assistant { align-self: flex-start; background: var(--surface2); border: 1px solid var(--line); font-family: var(--serif); }
+  .tmsg.tcard { display: flex; flex-direction: column; gap: 6px; max-width: 96%; }
+  .tcard-row b { display: block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 1px; }
   .tutor-empty { color: var(--ink-soft); font-size: 13.5px; font-style: italic; align-self: center; padding: 8px; }
   .tutor-status { padding: 0 16px; min-height: 18px; font-size: 12.5px; color: var(--ink-soft); }
   .tutor-controls { display: flex; gap: 8px; align-items: center; padding: 12px 16px 16px; flex-wrap: wrap; }
@@ -878,6 +880,11 @@ function tutorSystem() {
   } else if (c.kind === 'doc') {
     s += `\n\nThe student is studying a document titled "${c.title}". Here is its full text:\n\n${c.text}`;
     if (c.current) s += `\n\nThey are currently on this passage: "${c.current}"`;
+  } else if (c.kind === 'teachback') {
+    const q = c.q;
+    const sm = STUDYMAP[q.id] || {};
+    const principles = (sm.principles || []).map(p => `${p.id} — ${p.title}`).join('; ') || 'none recorded';
+    s += `\n\nThe student is doing a "teach-back" (Feynman technique) check on this practice question: instead of just picking an answer, they are about to explain OUT LOUD, in their own words, why the correct answer is correct. Your job now is to GRADE that explanation against the reference below — do not simply restate the reference, evaluate what they actually said.\nScenario: ${SCENARIOS[q.id.split('-')[0]]}\nQuestion: ${q.stem}\nCorrect answer (${'ABCD'[q.correct]}): ${q.options[q.correct]}\nOfficial explanation: ${q.explanation}\nPrinciple(s) this drills: ${principles}` + (q.rule ? `\nThe rule this drills: ${q.rule}` : '') + `\n\nTheir next message is their spoken explanation. Respond in EXACTLY three lines and nothing else, this exact format:\nCOVERED: <one short plain sentence — what they got right>\nMISSED: <one short plain sentence — what they left out or got wrong; say "Nothing major — solid explanation" if there is nothing to add>\nMISCONCEPTION: <one short plain sentence naming a misconception to correct; say "None" if there isn't one>`;
   }
   return s;
 }
@@ -890,7 +897,9 @@ function openTutor(ctx) {
   TUTOR.resumeIdx = (ctx.resumeIdx != null) ? ctx.resumeIdx : null;
   const els = tEls();
   els.panel.hidden = false;
-  els.ctx.textContent = ctx.kind === 'doc' ? ctx.title : ('Question · ' + SCENARIOS[ctx.q.id.split('-')[0]]);
+  els.ctx.textContent = ctx.kind === 'doc' ? ctx.title
+    : ctx.kind === 'teachback' ? ('Teach-back · ' + SCENARIOS[ctx.q.id.split('-')[0]])
+    : ('Question · ' + SCENARIOS[ctx.q.id.split('-')[0]]);
   els.resume.hidden = !(ctx.kind === 'doc' && TUTOR.resumeIdx != null);
   els.text.value = '';
   renderTutorThread();
@@ -914,13 +923,26 @@ function setTutorStatus(s) {
 
 function renderTutorThread() {
   const el = tEls().thread;
+  const isTeachback = TUTOR.ctx && TUTOR.ctx.kind === 'teachback';
   if (!TUTOR.messages.length) {
-    el.innerHTML = `<div class="tutor-empty">${SRClass ? 'Tap the mic and ask anything about this.' : 'Type a question below and hit Send.'}</div>`;
+    const hint = isTeachback
+      ? (SRClass ? 'Tap the mic and explain, in your own words, why the correct answer is right — the tutor will grade what you say.' : 'Type your explanation of why the correct answer is right, then hit Send — the tutor will grade it.')
+      : (SRClass ? 'Tap the mic and ask anything about this.' : 'Type a question below and hit Send.');
+    el.innerHTML = `<div class="tutor-empty">${hint}</div>`;
     return;
   }
-  el.innerHTML = TUTOR.messages.map(m =>
-    `<div class="tmsg ${m.role}"><span class="who">${m.role === 'user' ? 'You' : 'Tutor'}</span>${esc(m.content)}</div>`
-  ).join('');
+  el.innerHTML = TUTOR.messages.map(m => {
+    if (m.card) {
+      const c = m.card;
+      return `<div class="tmsg assistant tcard">
+        <span class="who">Tutor · Teach-back</span>
+        ${c.covered ? `<div class="tcard-row"><b>Covered</b>${esc(c.covered)}</div>` : ''}
+        ${c.missed ? `<div class="tcard-row"><b>Missed</b>${esc(c.missed)}</div>` : ''}
+        ${c.misconception ? `<div class="tcard-row"><b>Misconception</b>${esc(c.misconception)}</div>` : ''}
+      </div>`;
+    }
+    return `<div class="tmsg ${m.role}"><span class="who">${m.role === 'user' ? 'You' : 'Tutor'}</span>${esc(m.content)}</div>`;
+  }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
@@ -947,7 +969,7 @@ function startListening() {
   rec.onend = () => {
     TUTOR.listening = false;
     const q = els.text.value.trim();
-    if (q) { els.text.value = ''; submitTutor(q); }
+    if (q) { els.text.value = ''; submitToTutor(q); }
     else setTutorStatus('idle');
   };
   TUTOR.rec = rec; TUTOR.listening = true;
@@ -960,6 +982,35 @@ function stopListening() {
   TUTOR.listening = false;
 }
 
+async function callTutor(key) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 800,
+      system: [{ type: 'text', text: tutorSystem(), cache_control: { type: 'ephemeral' } }],
+      messages: TUTOR.messages.map(m => ({ role: m.role, content: m.content })),
+    }),
+  });
+  if (!res.ok) {
+    let msg = 'Tutor error ' + res.status + (res.status === 401 ? ' — check your Anthropic API key' : '');
+    try { const j = await res.json(); if (j.error && j.error.message) msg = j.error.message; } catch (_) {}
+    throw new Error(msg);
+  }
+  const j = await res.json();
+  if (j.usage) {
+    const u = j.usage;
+    console.log(`[tutor cache] cache_read_input_tokens=${u.cache_read_input_tokens || 0} cache_creation_input_tokens=${u.cache_creation_input_tokens || 0} input_tokens=${u.input_tokens || 0}`);
+  }
+  return (j.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').trim();
+}
+
 async function submitTutor(question) {
   const key = audioPrefs().anthKey;
   if (!key) { setTutorStatus('idle'); alert('Add your Anthropic API key under Audio → Tutor on the Practice tab to use the tutor.'); return; }
@@ -967,32 +1018,7 @@ async function submitTutor(question) {
   renderTutorThread();
   setTutorStatus('thinking');
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 800,
-        system: [{ type: 'text', text: tutorSystem(), cache_control: { type: 'ephemeral' } }],
-        messages: TUTOR.messages,
-      }),
-    });
-    if (!res.ok) {
-      let msg = 'Tutor error ' + res.status + (res.status === 401 ? ' — check your Anthropic API key' : '');
-      try { const j = await res.json(); if (j.error && j.error.message) msg = j.error.message; } catch (_) {}
-      throw new Error(msg);
-    }
-    const j = await res.json();
-    if (j.usage) {
-      const u = j.usage;
-      console.log(`[tutor cache] cache_read_input_tokens=${u.cache_read_input_tokens || 0} cache_creation_input_tokens=${u.cache_creation_input_tokens || 0} input_tokens=${u.input_tokens || 0}`);
-    }
-    const text = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').trim() || 'Sorry — I did not catch that. Try asking again.';
+    const text = await callTutor(key) || 'Sorry — I did not catch that. Try asking again.';
     TUTOR.messages.push({ role: 'assistant', content: text });
     renderTutorThread();
     setTutorStatus('speaking');
@@ -1004,12 +1030,54 @@ async function submitTutor(question) {
   }
 }
 
+/* Phase 4 grading contract (SUPERLEARN-SPEC.md §4): system prompt carries the official
+   explanation + matched principle; the model grades the student's spoken explanation and
+   returns a fixed COVERED/MISSED/MISCONCEPTION format, parsed into a compact card. */
+function parseTeachbackVerdict(text) {
+  const grab = (label) => {
+    const m = text.match(new RegExp(label + ':\\s*(.+?)(?=\\n[A-Z]+:|$)', 'is'));
+    return m ? m[1].trim() : '';
+  };
+  const covered = grab('COVERED'), missed = grab('MISSED'), misconception = grab('MISCONCEPTION');
+  if (!covered && !missed && !misconception) return { covered: text || 'No response — try again.', missed: '', misconception: '' };
+  return { covered: covered || '—', missed: missed || 'Nothing major — solid explanation.', misconception: misconception || 'None' };
+}
+function teachbackSpeech(card) {
+  let t = `Here's what you covered: ${card.covered} `;
+  if (card.missed) t += `Here's what you missed: ${card.missed} `;
+  if (card.misconception && !/^none\b/i.test(card.misconception)) t += `One thing to fix: ${card.misconception}`;
+  return t.trim();
+}
+async function submitTeachback(explanation) {
+  const key = audioPrefs().anthKey;
+  if (!key) { setTutorStatus('idle'); alert('Add your Anthropic API key under Audio → Tutor on the Practice tab to use teach-back.'); return; }
+  TUTOR.messages.push({ role: 'user', content: explanation });
+  renderTutorThread();
+  setTutorStatus('thinking');
+  try {
+    const text = await callTutor(key);
+    const card = parseTeachbackVerdict(text);
+    TUTOR.messages.push({ role: 'assistant', content: text, card });
+    renderTutorThread();
+    setTutorStatus('speaking');
+    speak(teachbackSpeech(card), () => setTutorStatus('idle'));
+  } catch (e) {
+    setTutorStatus('idle');
+    TUTOR.messages.push({ role: 'assistant', content: '⚠️ ' + (e.message || 'Something went wrong.') });
+    renderTutorThread();
+  }
+}
+function submitToTutor(text) {
+  if (TUTOR.ctx && TUTOR.ctx.kind === 'teachback') submitTeachback(text);
+  else submitTutor(text);
+}
+
 function initTutor() {
   const els = tEls();
   els.mic.addEventListener('click', () => { TUTOR.listening ? stopListening() : startListening(); });
   els.send.addEventListener('click', () => {
     const q = els.text.value.trim();
-    if (q) { els.text.value = ''; stopListening(); submitTutor(q); }
+    if (q) { els.text.value = ''; stopListening(); submitToTutor(q); }
   });
   els.text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); els.send.click(); } });
   els.close.addEventListener('click', closeTutor);
@@ -1382,12 +1450,14 @@ function reveal(q, order, pos, speakNow) {
   wireStudyLinks($('#verdict'));
   wireNotes($('#verdict'));
   if (S.mode === 'review') {
-    $('#nextSlot').innerHTML = `<div class="grades"><span class="grade-hint">How well did you know it? (keys 1–4)</span><button class="grade again" data-g="again">Again</button><button class="grade hard" data-g="hard">Hard</button><button class="grade good" data-g="good">Good</button><button class="grade easy" data-g="easy">Easy</button></div>`;
+    $('#nextSlot').innerHTML = `<div class="grades"><button class="ghost small" id="teachBtn">🧠 Teach it back</button><span class="grade-hint">How well did you know it? (keys 1–4)</span><button class="grade again" data-g="again">Again</button><button class="grade hard" data-g="hard">Hard</button><button class="grade good" data-g="good">Good</button><button class="grade easy" data-g="easy">Easy</button></div>`;
     document.querySelectorAll('.grade').forEach(b => b.addEventListener('click', () => gradeAndNext(q, b.dataset.g, ok)));
+    $('#teachBtn').addEventListener('click', () => openTutor({ kind: 'teachback', q }));
     const sug = document.querySelector(ok ? '.grade.good' : '.grade.again'); if (sug) sug.focus();
   } else {
-    $('#nextSlot').innerHTML = `<button class="ghost small" id="askBtn">🎤 Ask the tutor</button> <button class="primary" id="nextBtn">${S.idx + 1 < S.queue.length ? 'Next question' : 'See results'}</button>`;
+    $('#nextSlot').innerHTML = `<button class="ghost small" id="teachBtn">🧠 Teach it back</button> <button class="ghost small" id="askBtn">🎤 Ask the tutor</button> <button class="primary" id="nextBtn">${S.idx + 1 < S.queue.length ? 'Next question' : 'See results'}</button>`;
     $('#nextBtn').addEventListener('click', next);
+    $('#teachBtn').addEventListener('click', () => openTutor({ kind: 'teachback', q }));
     $('#askBtn').addEventListener('click', () => openTutor({ kind: 'question', q }));
     $('#nextBtn').focus();
   }
@@ -1709,9 +1779,9 @@ function renderP3Body() {
     </details>`).join('');
 }
 
-/* Phase 4 — Make it Simple: AGENT-4's build; this is just the framing + a stand-in link */
+/* Phase 4 — Make it Simple: teach-back (Feynman technique) grading */
 function renderP4Body() {
-  return `<p class="sub" style="margin:0 0 10px">Coming soon — explain an answer out loud and the tutor grades your reasoning against the official explanation. In the meantime, hit 🎤 Ask on any answered question in Practice and talk through your reasoning with the tutor — same "why" muscle.</p>
+  return `<p class="sub" style="margin:0 0 10px">Answer a question in Drill or Review, then hit "🧠 Teach it back" — explain out loud, in your own words, why the correct answer is right. The tutor grades your explanation against the official explanation and the principle it drills, and names anything you missed or got wrong.</p>
     <button class="ghost small" id="p4ToPractice">Go to Practice</button>`;
 }
 function wireP4() {
