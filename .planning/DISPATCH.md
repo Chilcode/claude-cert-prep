@@ -11,8 +11,8 @@
 |-------|------|-------|---------------|-------|
 | **AGENT-1** | Learning-science spec + rebuild the Study System spreadsheet | Sonnet 5 | `.planning/SUPERLEARN-SPEC.md`, new `.xlsx` | ✅ DONE — spec approved + written, spreadsheet built. AGENT-3 still needs orchestrator to flip its own BLOCKED gate |
 | **AGENT-2** | De-scratchpad build + size/zoom fix + review shuffle + tutor prompt-caching | Sonnet 5 | `build/quiz-template.html`, `build/build_hub.py`, `index.html` | ✅ SHIPPED — committed `0e1a0b6`, pushed to live Pages (David approved). 3 fixes verified in deployed index.html. |
-| **AGENT-3** | 7-phase "Learning Path" scaffold + Phase-5 loading-strategy scheduler | Sonnet 5 | `build/quiz-template.html` | ✅ MERGED — committed `d7e2405`; orchestrator-verified (node --check PASS, prior 3 fixes intact, mastery-inversion avoided). Push to live HELD for David's browser check + Phase-1-view sort decision. |
-| **AGENT-4** | Teach-back / Feynman "explain *why*" mode | Sonnet 5 | `build/quiz-template.html` | ⏳ NEEDS-REVIEW — built + committed (`c090f78`); no GUI browser to eyeball mic/voice UX. |
+| **AGENT-3** | 7-phase "Learning Path" scaffold + Phase-5 loading-strategy scheduler | Sonnet 5 | `build/quiz-template.html` | ✅ SHIPPED — committed `d7e2405`, now live (pushed with AGENT-4). Verified clean. Pending: David's Learning Path browser check + Phase-1-view sort decision. |
+| **AGENT-4** | Teach-back / Feynman "explain *why*" mode | Sonnet 5 | `build/quiz-template.html` | ✅ SHIPPED — committed `c090f78`, pushed live (`5abe08d`); orchestrator-verified (node --check PASS, no regressions, mastery faithful). Pending: David's live teach-back mic/card UX check (human-only). |
 
 State values: `READY` · `IN PROGRESS` · `NEEDS-REVIEW` (waiting on David/orchestrator) · `BLOCKED` · `ROTATE` (near context limit — see §Rotation) · `DONE`.
 
@@ -97,6 +97,7 @@ Sonnet 5 / Opus 4.8 have **1M-token** windows, so this should be rare — but if
 - 2026-07-12 — David approved → pushed AGENT-1 + AGENT-2 + board to GitHub `main`. Live Pages now carries the 3 fixes.
 - 2026-07-12 — AGENT-1 mastery-inversion reverted + spec §1/§5.2 corrected → committed & pushed (`2f03ff7`). Added Global Rule 8 (faithful copy).
 - 2026-07-12 — AGENT-3 verified (node --check PASS, prior 3 fixes intact, mastery-inversion correctly avoided — it caught its own repeat via git-log diff) and merged (`d7e2405`). Push to live Pages HELD for David's browser check of the Learning Path + his call on the Phase-1-view sort direction. AGENT-4 → READY.
+- 2026-07-12 — **WAVE 2 COMPLETE.** AGENT-4 teach-back built (`c090f78`), David pushed → `5abe08d` live. Orchestrator-verified the full deployed bundle: node --check PASS, all prior fixes + Learning Path intact, `domainPriority` still weight-only. Remaining is human-only: live browser checks (teach-back mic/card, Learning Path, size fix) + David's 2 decisions (Phase-1 sort, keep/revert the 2 spreadsheet tweaks).
 
 ---
 
